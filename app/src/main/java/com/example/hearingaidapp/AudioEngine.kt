@@ -175,7 +175,7 @@ class AudioEngine(private val context: Context) {
 
             // Create ultra-low-latency AudioTrack
             audioTrack = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                AudioTrack.Builder()
+                val builder = AudioTrack.Builder()
                     .setAudioAttributes(
                         AudioAttributes.Builder()
                             .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)  // Changed for hearing aid use
@@ -192,8 +192,12 @@ class AudioEngine(private val context: Context) {
                     )
                     .setBufferSizeInBytes(playBufferSize)
                     .setTransferMode(AudioTrack.MODE_STREAM)
-                    .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
-                    .build()
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    builder.setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
+                }
+
+                builder.build()
             } else {
                 AudioTrack(
                     AudioManager.STREAM_MUSIC,

@@ -18,18 +18,18 @@ class SpectrumView @JvmOverloads constructor(
     }
 
     private val backgroundPaint = Paint().apply {
-        color = Color.parseColor("#1a1a1a")
+        color = Color.TRANSPARENT
         style = Paint.Style.FILL
     }
 
     private val textPaint = Paint().apply {
-        color = Color.parseColor("#FFFFFF")
+        color = Color.parseColor("#A3F69C")
         textSize = 20f
         isAntiAlias = true
     }
 
     private val gridPaint = Paint().apply {
-        color = Color.parseColor("#333333")
+        color = Color.parseColor("#0A3A3A")
         strokeWidth = 1f
         isAntiAlias = true
     }
@@ -41,16 +41,16 @@ class SpectrumView @JvmOverloads constructor(
 
     // Color gradient for frequency spectrum
     private val colors = intArrayOf(
-        Color.parseColor("#1B5E20"),  // Dark green - low frequencies
-        Color.parseColor("#2E7D32"),  // Green
-        Color.parseColor("#43A047"),  // Light green
-        Color.parseColor("#66BB6A"),  // Lime green
-        Color.parseColor("#FDD835"),  // Yellow - mid frequencies
-        Color.parseColor("#FFB300"),  // Amber
-        Color.parseColor("#FB8C00"),  // Orange
-        Color.parseColor("#F57400"),  // Deep orange
-        Color.parseColor("#E53935"),  // Red - high frequencies
-        Color.parseColor("#C62828")   // Dark red
+        Color.parseColor("#558B2F"),
+        Color.parseColor("#689F38"),
+        Color.parseColor("#7CB342"),
+        Color.parseColor("#88D982"),
+        Color.parseColor("#A3F69C"),
+        Color.parseColor("#88D982"),
+        Color.parseColor("#7CB342"),
+        Color.parseColor("#689F38"),
+        Color.parseColor("#558B2F"),
+        Color.parseColor("#33691E")
     )
 
     fun updateSpectrum(fftMagnitudes: FloatArray) {
@@ -108,35 +108,15 @@ class SpectrumView @JvmOverloads constructor(
 
             // Draw the bar with rounded top
             val rect = RectF(x, y, x + barWidth - padding, height)
-            canvas.drawRoundRect(rect, 4f, 4f, barPaint)
+            canvas.drawRoundRect(rect, 6f, 6f, barPaint)
 
             // Add peak dots for high values
             if (smoothedMagnitudes[i] > 0.8f) {
-                barPaint.color = Color.WHITE
+                barPaint.color = Color.parseColor("#A3F69C")
                 canvas.drawCircle(x + (barWidth - padding) / 2, y - 5f, 3f, barPaint)
                 barPaint.color = colors[colorIndex] // Reset color
             }
         }
 
-        // Draw frequency labels
-        val labelPositions = intArrayOf(0, 8, 16, 24, 32, 40, 48, 56, 63)
-        for (i in frequencyLabels.indices) {
-            if (i < labelPositions.size) {
-                val x = labelPositions[i] * barWidth
-                canvas.drawText(frequencyLabels[i], x + 5f, height - 5f, textPaint)
-            }
-        }
-
-        // Draw title
-        textPaint.textSize = 24f
-        canvas.drawText("Real-Time FFT Spectrum", 10f, 25f, textPaint)
-        textPaint.textSize = 20f  // Reset
-
-        // Draw border
-        canvas.drawRect(0f, 0f, width, height, Paint().apply {
-            color = Color.parseColor("#FF9800")
-            strokeWidth = 3f
-            style = Paint.Style.STROKE
-        })
     }
 }

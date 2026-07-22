@@ -13,25 +13,25 @@ class WaveformView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private val waveformPaint = Paint().apply {
-        color = Color.parseColor("#4CAF50")
-        strokeWidth = 2f
+        color = Color.parseColor("#A3F69C")
+        strokeWidth = 3f
         isAntiAlias = true
         style = Paint.Style.STROKE
     }
 
     private val centerLinePaint = Paint().apply {
-        color = Color.parseColor("#666666")
+        color = Color.parseColor("#1A4A4A")
         strokeWidth = 1f
         pathEffect = DashPathEffect(floatArrayOf(10f, 5f), 0f)
     }
 
     private val backgroundPaint = Paint().apply {
-        color = Color.parseColor("#1a1a1a")
+        color = Color.TRANSPARENT
         style = Paint.Style.FILL
     }
 
     private val gridPaint = Paint().apply {
-        color = Color.parseColor("#333333")
+        color = Color.parseColor("#0A3A3A")
         strokeWidth = 1f
         isAntiAlias = true
     }
@@ -95,11 +95,5 @@ class WaveformView @JvmOverloads constructor(
             canvas.drawPath(path, waveformPaint)
         }
 
-        // Draw border
-        canvas.drawRect(0f, 0f, width, height, Paint().apply {
-            color = Color.parseColor("#4CAF50")
-            strokeWidth = 3f
-            style = Paint.Style.STROKE
-        })
     }
 }

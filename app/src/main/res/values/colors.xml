@@ -1,10 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+    <!-- Primary -->
+    <color name="primary">#FF0D631B</color>
+    <color name="on_primary">#FFFFFFFF</color>
+    <color name="primary_container">#FF2E7D32</color>
+    <color name="on_primary_container">#FFCBFFC2</color>
+    <color name="primary_fixed">#FFA3F69C</color>
+    <color name="primary_fixed_dim">#FF88D982</color>
+    <color name="on_primary_fixed">#FF002204</color>
+    <color name="on_primary_fixed_variant">#FF005312</color>
+    <color name="inverse_primary">#FF88D982</color>
+    <color name="surface_tint">#FF1B6D24</color>
+
+    <!-- Secondary -->
+    <color name="secondary">#FF4A6267</color>
+    <color name="on_secondary">#FFFFFFFF</color>
+    <color name="secondary_container">#FFCDE7ED</color>
+    <color name="on_secondary_container">#FF50686D</color>
+    <color name="secondary_fixed">#FFCDE7ED</color>
+    <color name="secondary_fixed_dim">#FFB1CBD1</color>
+    <color name="on_secondary_fixed">#FF051F23</color>
+    <color name="on_secondary_fixed_variant">#FF334B4F</color>
+
+    <!-- Tertiary -->
+    <color name="tertiary">#FF495573</color>
+    <color name="on_tertiary">#FFFFFFFF</color>
+    <color name="tertiary_container">#FF616D8D</color>
+    <color name="on_tertiary_container">#FFEEF0FF</color>
+    <color name="tertiary_fixed">#FFD9E2FF</color>
+    <color name="tertiary_fixed_dim">#FFBAC6EA</color>
+    <color name="on_tertiary_fixed">#FF0E1B36</color>
+    <color name="on_tertiary_fixed_variant">#FF3A4664</color>
+
+    <!-- Error -->
+    <color name="error">#FFBA1A1A</color>
+    <color name="on_error">#FFFFFFFF</color>
+    <color name="error_container">#FFFFDAD6</color>
+    <color name="on_error_container">#FF93000A</color>
+
+    <!-- Surface -->
+    <color name="surface">#FFF8FAF8</color>
+    <color name="on_surface">#FF191C1B</color>
+    <color name="surface_variant">#FFE1E3E1</color>
+    <color name="on_surface_variant">#FF40493D</color>
+    <color name="surface_dim">#FFD8DAD9</color>
+    <color name="surface_bright">#FFF8FAF8</color>
+    <color name="surface_container_lowest">#FFFFFFFF</color>
+    <color name="surface_container_low">#FFF2F4F2</color>
+    <color name="surface_container">#FFECEEEC</color>
+    <color name="surface_container_high">#FFE6E9E7</color>
+    <color name="surface_container_highest">#FFE1E3E1</color>
+    <color name="inverse_surface">#FF2E3130</color>
+    <color name="inverse_on_surface">#FFEFF1EF</color>
+
+    <!-- Outline -->
+    <color name="outline">#FF707A6C</color>
+    <color name="outline_variant">#FFBFCABA</color>
+
+    <!-- Background -->
+    <color name="background">#FFF8FAF8</color>
+    <color name="on_background">#FF191C1B</color>
+
+    <!-- Visualizer colors -->
+    <color name="visualizer_bg">#FF051F23</color>
+    <color name="visualizer_bar">#FF88D982</color>
+    <color name="visualizer_bar_peak">#FFA3F69C</color>
+    <color name="visualizer_waveform">#FFA3F69C</color>
+    <color name="visualizer_waveform_shadow">#FF88D982</color>
+
+    <!-- Legacy compat -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>

@@ -6,18 +6,14 @@ import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.widget.Button
-import android.widget.SeekBar
-import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import android.util.Log
 import android.view.LayoutInflater
-import android.widget.ArrayAdapter
-import android.widget.EditText
-import android.widget.ListView
-import android.widget.Spinner
+import android.view.View
+import android.widget.*
+import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.Fragment
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
 
@@ -26,7 +22,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var audioEngine: AudioEngine
-    private lateinit var btnToggle: Button
+    private lateinit var btnToggle: View
+    private lateinit var tvToggleText: TextView
     private lateinit var presetManager: PresetManager
 
     // Master Volume
@@ -36,7 +33,7 @@ class MainActivity : AppCompatActivity() {
     // Preset Management
     private lateinit var btnLoadPreset: Button
     private lateinit var btnSavePreset: Button
-    private lateinit var btnAddFilter: Button
+    private lateinit var btnAddFilter: ImageButton
     private lateinit var tvCurrentPresetName: TextView
 
     // Dynamic Filter Management
@@ -59,6 +56,34 @@ class MainActivity : AppCompatActivity() {
     // Visualization views
     private lateinit var waveformView: WaveformView
     private lateinit var spectrumView: SpectrumView
+
+    private lateinit var bottomNav: BottomNavigationView
+    private lateinit var scrollContent: androidx.core.widget.NestedScrollView
+    
+    private lateinit var tvSessionTimer: TextView
+    private lateinit var statusIndicator: View
+    private var sessionStartTime: Long = 0L
+    private val timerHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val timerRunnable = object : Runnable {
+        override fun run() {
+            if (isRunning) {
+                val elapsed = System.currentTimeMillis() - sessionStartTime
+                val hours = (elapsed / 3600000).toInt()
+                val minutes = ((elapsed % 3600000) / 60000).toInt()
+                val seconds = ((elapsed % 60000) / 1000).toInt()
+                if (::tvSessionTimer.isInitialized) {
+                    tvSessionTimer.text = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                }
+                timerHandler.postDelayed(this, 1000)
+            }
+        }
+    }
+
+    private lateinit var tvNoiseCancelingStatus: TextView
+    private lateinit var tvGainValue: TextView
+    
+    private lateinit var advancedSection: View
+    private lateinit var advancedHeader: View
 
     private var isRunning = false
     private var pendingStart = false
@@ -122,6 +147,7 @@ class MainActivity : AppCompatActivity() {
     private fun initializeViews() {
         // Main controls
         btnToggle = findViewById(R.id.btnToggle)
+        tvToggleText = findViewById(R.id.tvToggleText)
         seekBarVolume = findViewById(R.id.seekBarVolume)
         tvVolumeLevel = findViewById(R.id.tvVolumeLevel)
 
@@ -155,9 +181,75 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             // Visualization views not found in layout - that's okay
         }
+
+        try {
+            bottomNav = findViewById(R.id.bottomNav)
+            scrollContent = findViewById(R.id.scrollContent)
+            tvSessionTimer = findViewById(R.id.tvSessionTimer)
+            statusIndicator = findViewById(R.id.statusIndicator)
+            tvNoiseCancelingStatus = findViewById(R.id.tvNoiseCancelingStatus)
+            tvGainValue = findViewById(R.id.tvGainValue)
+        } catch (e: Exception) {}
+
+        try {
+            advancedSection = findViewById(R.id.advancedSection)
+            advancedHeader = findViewById(R.id.advancedHeader)
+        } catch (e: Exception) {}
     }
 
     private fun setupListeners() {
+        try {
+            bottomNav.setOnItemSelectedListener { item ->
+                when (item.itemId) {
+                    R.id.nav_control -> {
+                        if (::scrollContent.isInitialized) scrollContent.visibility = View.VISIBLE
+                        hideFragments()
+                        true
+                    }
+                    R.id.nav_profiles -> {
+                        if (::scrollContent.isInitialized) scrollContent.visibility = View.GONE
+                        showFragment(ProfilesFragment())
+                        true
+                    }
+                    R.id.nav_activity -> {
+                        if (::scrollContent.isInitialized) scrollContent.visibility = View.GONE
+                        showFragment(ActivityFragment())
+                        true
+                    }
+                    R.id.nav_settings -> {
+                        if (::scrollContent.isInitialized) scrollContent.visibility = View.GONE
+                        showFragment(SettingsFragment())
+                        true
+                    }
+                    else -> false
+                }
+            }
+        } catch (e: Exception) {}
+
+        try {
+            val chipRestaurant = findViewById<View>(R.id.chipRestaurant)
+            val chipHome = findViewById<View>(R.id.chipHome)
+            val chipOutdoor = findViewById<View>(R.id.chipOutdoor)
+            chipRestaurant?.setOnClickListener { loadPresetByName("Restaurant") }
+            chipHome?.setOnClickListener { loadPresetByName("Home") }
+            chipOutdoor?.setOnClickListener { loadPresetByName("Outdoor") }
+        } catch (e: Exception) {}
+
+        try {
+            if (::advancedHeader.isInitialized) {
+                advancedHeader.setOnClickListener {
+                    val content = findViewById<View>(R.id.advancedContent)
+                    if (content != null) {
+                        if (content.visibility == View.VISIBLE) {
+                            content.visibility = View.GONE
+                        } else {
+                            content.visibility = View.VISIBLE
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {}
+
         // Power button
         btnToggle.setOnClickListener {
             try {
@@ -194,6 +286,11 @@ class MainActivity : AppCompatActivity() {
                         audioEngine.setAmplification(gain)
                     }
                     tvVolumeLevel.text = "Volume: ${(gain * 100).toInt()}%"
+                    try {
+                        if (::tvGainValue.isInitialized) {
+                            tvGainValue.text = "+${(gain * 10).toInt() - 5}dB"
+                        }
+                    } catch (e: Exception) {}
                     markAsCustomPreset()
                 }
             }
@@ -242,6 +339,11 @@ class MainActivity : AppCompatActivity() {
             if (::audioEngine.isInitialized) {
                 audioEngine.setNoiseCanceling(isChecked)
                 btnResetNoiseProfile.isEnabled = isChecked
+                try {
+                    if (::tvNoiseCancelingStatus.isInitialized) {
+                        tvNoiseCancelingStatus.text = if (isChecked) "Active" else "Off"
+                    }
+                } catch (e: Exception) {}
                 if (isChecked) {
                     tvNoiseStatus.visibility = android.view.View.VISIBLE
                     tvNoiseStatus.text = "Learning noise..."
@@ -276,7 +378,7 @@ class MainActivity : AppCompatActivity() {
             if (::audioEngine.isInitialized) {
                 audioEngine.resetNoiseCancelingProfile()
                 tvNoiseStatus.text = "Learning noise..."
-                tvNoiseStatus.setTextColor(getColor(android.R.color.holo_orange_light))
+                tvNoiseStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_light))
                 Toast.makeText(this, "Noise profile reset. Stay quiet for a moment...", Toast.LENGTH_SHORT).show()
                 checkNoiseProfileStatus()
             }
@@ -291,7 +393,7 @@ class MainActivity : AppCompatActivity() {
                 if (::audioEngine.isInitialized && switchNoiseCanceling.isChecked) {
                     if (audioEngine.isNoiseProfileLearned()) {
                         tvNoiseStatus.text = "Active"
-                        tvNoiseStatus.setTextColor(getColor(android.R.color.holo_green_light))
+                        tvNoiseStatus.setTextColor(ContextCompat.getColor(this@MainActivity, android.R.color.holo_green_light))
                     } else {
                         handler.postDelayed(this, 500) // Check again in 500ms
                     }
@@ -304,6 +406,11 @@ class MainActivity : AppCompatActivity() {
         // Update master volume display
         val masterGain = 0.5f + (seekBarVolume.progress / 100.0f) * 3.5f
         tvVolumeLevel.text = "Volume: ${(masterGain * 100).toInt()}%"
+        try {
+            if (::tvGainValue.isInitialized) {
+                tvGainValue.text = "+${(masterGain * 10).toInt() - 5}dB"
+            }
+        } catch(e: Exception) {}
 
         // Update noise canceling display
         tvNoiseStrength.text = "Strength: ${seekBarNoiseStrength.progress}%"
@@ -340,8 +447,17 @@ class MainActivity : AppCompatActivity() {
             // Start audio processing (output visualization is enabled automatically)
             audioEngine.startAudioProcessing()
             isRunning = true
-            btnToggle.text = "STOP HEARING AID"
-            btnToggle.backgroundTintList = getColorStateList(android.R.color.holo_red_dark)
+            tvToggleText.text = "STOP HEARING AID"
+            btnToggle.setBackgroundResource(R.drawable.bg_emergency_button)
+            
+            try {
+                if (::statusIndicator.isInitialized) {
+                    statusIndicator.visibility = View.VISIBLE
+                }
+                sessionStartTime = System.currentTimeMillis()
+                timerHandler.post(timerRunnable)
+            } catch(e: Exception) {}
+            
             Toast.makeText(this, "Hearing aid with output visualization started", Toast.LENGTH_SHORT).show()
         } catch (e: SecurityException) {
             Toast.makeText(this, "Permission denied. Cannot start hearing aid.", Toast.LENGTH_LONG).show()
@@ -355,8 +471,16 @@ class MainActivity : AppCompatActivity() {
         try {
             audioEngine.stopAudioProcessing()
             isRunning = false
-            btnToggle.text = "START HEARING AID"
-            btnToggle.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
+            tvToggleText.text = "START HEARING AID"
+            btnToggle.setBackgroundResource(R.drawable.bg_start_button)
+            
+            try {
+                if (::statusIndicator.isInitialized) {
+                    statusIndicator.visibility = View.GONE
+                }
+                timerHandler.removeCallbacks(timerRunnable)
+            } catch(e: Exception) {}
+            
             Toast.makeText(this, "Hearing aid stopped", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, "Error stopping hearing aid: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -455,11 +579,11 @@ class MainActivity : AppCompatActivity() {
     private fun updateUIBasedOnPermissions() {
         if (hasPermissions()) {
             btnToggle.isEnabled = true
-            btnToggle.text = if (isRunning) "STOP HEARING AID" else "START HEARING AID"
+            tvToggleText.text = if (isRunning) "STOP HEARING AID" else "START HEARING AID"
             btnToggle.alpha = 1.0f
         } else {
             btnToggle.isEnabled = true
-            btnToggle.text = "GRANT MICROPHONE PERMISSION"
+            tvToggleText.text = "GRANT MICROPHONE PERMISSION"
             btnToggle.alpha = 0.7f
             if (isRunning) {
                 stopHearingAid()
@@ -922,5 +1046,27 @@ class MainActivity : AppCompatActivity() {
         })
 
         dialog.show()
+    }
+
+    private fun showFragment(fragment: Fragment) {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, fragment)
+            .commit()
+    }
+
+    private fun hideFragments() {
+        val fragment = supportFragmentManager.findFragmentById(R.id.fragmentContainer)
+        if (fragment != null) {
+            supportFragmentManager.beginTransaction().remove(fragment).commit()
+        }
+    }
+
+    private fun loadPresetByName(name: String) {
+        val preset = presetManager.loadPreset(name)
+        if (preset != null) {
+            loadPreset(preset)
+        } else {
+            Toast.makeText(this, "Preset '$name' not found", Toast.LENGTH_SHORT).show()
+        }
     }
 }

@@ -1,41 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@color/surface"
+    android:orientation="vertical">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Manage Presets"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="16dp" />
+        android:fontFamily="sans-serif-medium"
+        android:padding="24dp"
+        android:text="Load Preset"
+        android:textColor="@color/on_surface"
+        android:textSize="22sp" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="16dp"
+        app:boxBackgroundColor="@color/surface_container_low"
+        app:boxCornerRadiusBottomEnd="24dp"
+        app:boxCornerRadiusBottomStart="24dp"
+        app:boxCornerRadiusTopEnd="24dp"
+        app:boxCornerRadiusTopStart="24dp"
+        app:startIconDrawable="@drawable/ic_search"
+        app:startIconTint="@color/on_surface_variant">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etPresetSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Search presets..."
+            android:textColor="@color/on_surface" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <ListView
+                android:id="@+id/lvPresets"
+                android:layout_width="match_parent"
+                android:layout_height="380dp"
+                android:divider="@null"
+                android:dividerHeight="0dp"
+                android:paddingHorizontal="24dp" />
+
+            <LinearLayout
+                android:id="@+id/presetListContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="24dp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <TextView
+        android:id="@+id/tvNoPresets"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="24dp"
+        android:text="No presets available"
+        android:textColor="@color/on_surface_variant" />
 
     <TextView
         android:id="@+id/tvCurrentPreset"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Current: None"
-        android:textSize="14sp"
-        android:layout_marginBottom="8dp" />
-
-    <ListView
-        android:id="@+id/lvPresets"
-        android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:divider="@android:color/darker_gray"
-        android:dividerHeight="1dp" />
-
-    <TextView
-        android:id="@+id/tvNoPresets"
-        android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:text="No presets available.\nCreate one using the Save button."
         android:gravity="center"
-        android:textSize="14sp"
-        android:textColor="@android:color/darker_gray"
-        android:visibility="gone" />
+        android:paddingHorizontal="24dp"
+        android:paddingBottom="16dp"
+        android:text="Current: None"
+        android:textColor="@color/on_surface_variant" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:padding="24dp">
+
+        <Button
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancel"
+            android:textColor="@color/primary" />
+    </LinearLayout>
 
 </LinearLayout>
