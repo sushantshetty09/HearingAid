@@ -99,7 +99,7 @@ data class EQPreset(
         }
 
         /**
-         * Create default presets
+         * Create default presets with safe gain headroom calibration
          */
         fun getDefaultPresets(): List<EQPreset> {
             return listOf(
@@ -116,17 +116,17 @@ data class EQPreset(
                     noiseGateThreshold = 0.0f,
                     compressionRatio = 0.0f
                 ),
-                // Speech clarity preset
+                // Speech clarity preset (calibrated for safe headroom)
                 EQPreset(
                     name = "Speech Clarity",
                     filters = listOf(
-                        FilterBand(250f, -3f, 1.0f),
-                        FilterBand(1000f, 6f, 1.5f),
-                        FilterBand(2500f, 8f, 1.5f),
-                        FilterBand(4000f, 6f, 1.2f),
+                        FilterBand(250f, -2f, 1.0f),
+                        FilterBand(1000f, 3f, 1.2f),
+                        FilterBand(2500f, 4f, 1.2f),
+                        FilterBand(4000f, 3f, 1.0f),
                         FilterBand(8000f, -2f, 1.0f)
                     ),
-                    masterVolume = 1.2f,
+                    masterVolume = 1.0f,
                     noiseGateThreshold = 0.02f,
                     compressionRatio = 0.5f
                 ),
@@ -134,8 +134,8 @@ data class EQPreset(
                 EQPreset(
                     name = "Bass Boost",
                     filters = listOf(
-                        FilterBand(60f, 8f, 1.0f),
-                        FilterBand(250f, 6f, 1.0f),
+                        FilterBand(60f, 4f, 1.0f),
+                        FilterBand(250f, 3f, 1.0f),
                         FilterBand(1000f, 0f, 1.0f),
                         FilterBand(4000f, 0f, 1.0f)
                     ),
@@ -143,17 +143,17 @@ data class EQPreset(
                     noiseGateThreshold = 0.0f,
                     compressionRatio = 0.0f
                 ),
-                // High Frequency Loss preset (common in aging)
+                // High Frequency Loss preset (calibrated for safe headroom)
                 EQPreset(
                     name = "High Freq Loss",
                     filters = listOf(
                         FilterBand(250f, 0f, 1.0f),
-                        FilterBand(1000f, 3f, 1.0f),
-                        FilterBand(2000f, 8f, 1.2f),
-                        FilterBand(4000f, 12f, 1.5f),
-                        FilterBand(8000f, 15f, 1.5f)
+                        FilterBand(1000f, 2f, 1.0f),
+                        FilterBand(2000f, 4f, 1.1f),
+                        FilterBand(4000f, 6f, 1.2f),
+                        FilterBand(8000f, 7f, 1.2f)
                     ),
-                    masterVolume = 1.5f,
+                    masterVolume = 1.1f,
                     noiseGateThreshold = 0.03f,
                     compressionRatio = 0.7f
                 ),
@@ -161,13 +161,13 @@ data class EQPreset(
                 EQPreset(
                     name = "Music",
                     filters = listOf(
-                        FilterBand(60f, 5f, 1.0f),
-                        FilterBand(250f, 2f, 1.0f),
+                        FilterBand(60f, 3f, 1.0f),
+                        FilterBand(250f, 1f, 1.0f),
                         FilterBand(1000f, -1f, 1.0f),
-                        FilterBand(4000f, 3f, 1.2f),
-                        FilterBand(12000f, 6f, 1.0f)
+                        FilterBand(4000f, 2f, 1.0f),
+                        FilterBand(12000f, 3f, 1.0f)
                     ),
-                    masterVolume = 1.1f,
+                    masterVolume = 1.0f,
                     noiseGateThreshold = 0.0f,
                     compressionRatio = 0.3f
                 )
