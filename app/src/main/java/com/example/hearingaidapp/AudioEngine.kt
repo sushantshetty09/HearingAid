@@ -40,6 +40,17 @@ class AudioEngine(private val context: Context) {
         }
     }
 
+    // Feedback listener interface
+    interface FeedbackEventListener {
+        fun onFeedbackDetected(frequencyHz: Float)
+    }
+
+    private var feedbackEventListener: FeedbackEventListener? = null
+
+    fun setFeedbackEventListener(listener: FeedbackEventListener?) {
+        feedbackEventListener = listener
+    }
+
     private var audioRecord: AudioRecord? = null
     private var audioTrack: AudioTrack? = null
     private var audioThread: Thread? = null
@@ -49,42 +60,89 @@ class AudioEngine(private val context: Context) {
     private var sampleRate: Int = 48000
     private var recordBufferSize: Int = 0
     private var playBufferSize: Int = 0
-    private var amplificationGain = 1.5f
+    private var targetAmplificationGain = 1.5f
+    private var currentAmplificationGain = 1.5f
+    private var autoHeadroomScale = 1.0f
+    private var nativeFramesPerBuffer = 128
+
+    // Smooth fade-in / fade-out control
+    private var fadeFactor = 0.0f
+    private var isStopping = false
+
+    // Feedback howling detection & auto-ducking
+    private var feedbackDuckingGain = 1.0f
+    private var consecutiveFeedbackFrames = 0
+    private var lastFeedbackTime = 0L
 
     // Use extremely small processing chunks for minimal latency
     private var processingChunkSize = 128  // Reduced from 256 to 128 for lower latency
+    private var lowLatencyMode = true
 
     // Dynamic EQ - supports adding/removing bands
     private var eqBands = mutableListOf<EQBand>()
     private var filters = mutableListOf<BiquadFilter>()
 
-    // Reduced advanced features for performance
+    // Advanced dynamics
     private var noiseGateThreshold = 0.02f
     private var compressionRatio = 0.7f
     private var compressionThreshold = 0.6f
 
-    // Noise Canceling System (Spectral Subtraction)
+    // ========================================================================
+    // NOISE CANCELING SYSTEM — STFT-based spectral subtraction
+    // ========================================================================
     private var noiseCancelingEnabled = false
     private var noiseCancelingStrength = 0.7f // 0.0 to 1.0
-    private val noiseProfileSize = 512
-    private var noiseProfile = FloatArray(noiseProfileSize) { 0f }
-    private var noiseProfileSamples = 0
-    private val maxNoiseProfileSamples = 50 // Samples to collect for noise profile
-    private var noiseProfileLearned = false
-    private val spectralFloor = 0.01f // Minimum gain to prevent complete silence
-    private var noiseEstimateSmoothing = 0.9f // Smoothing factor for noise estimate
-    
-    // Wiener filter coefficients for better noise reduction
-    private var wienerGains = FloatArray(noiseProfileSize) { 1f }
 
-    // Visualization (reduced frequency to save CPU and reduce latency)
+    // STFT parameters
+    private val stftSize = 512         // FFT frame length (power of 2)
+    private val stftHop = 256          // 50% overlap for COLA reconstruction
+    private val stftBins = stftSize / 2 + 1  // Number of unique frequency bins (257)
+
+    // Noise profile (stored as average magnitude per FFT bin)
+    private var noiseProfile = FloatArray(stftBins) { 0f }
+    private var noiseProfileSamples = 0
+    private val maxNoiseProfileSamples = 50
+    private var noiseProfileLearned = false
+    private val spectralFloor = 0.01f         // Minimum gain to prevent complete silence
+    private var noiseEstimateSmoothing = 0.9f // Smoothing factor for Wiener gain updates
+    private var overSubtractionFactor = 2.0f  // 1.5–3.0x on noise power for aggressive suppression
+    private val adaptRate = 0.01f             // Slow adaptation rate for voice-activity-aware updates
+
+    // Wiener filter gains & decision-directed a priori SNR buffers (Ephraim-Malah style)
+    private var wienerGains = FloatArray(stftBins) { 1f }
+    private var prevCleanMag = FloatArray(stftBins) { 0f }
+    private var aPrioriSnr = FloatArray(stftBins) { 1f }
+    private val alphaDD = 0.92f // Decision-directed temporal smoothing factor
+
+    // Pre-allocated Hann window (computed once at init)
+    private val hannWindow = FloatArray(stftSize)
+
+    // Pre-allocated STFT work buffers (ZERO per-callback allocations on audio thread)
+    private val stftInputBuf = FloatArray(stftSize)  // Input frame accumulator
+    private var stftFilled = 0                        // Samples currently in accumulator
+    private val stftWorkReal = DoubleArray(stftSize)  // FFT real part
+    private val stftWorkImag = DoubleArray(stftSize)  // FFT imaginary part
+    private val stftMag = FloatArray(stftBins)        // Magnitude spectrum
+    private val stftPhase = FloatArray(stftBins)      // Phase spectrum
+    private val synthFrame = FloatArray(stftSize)     // IFFT output
+    private val olaBuffer = FloatArray(stftHop)       // Overlap-add tail from previous frame
+
+    // Output FIFO for denoised samples (circular buffer)
+    private val stftOutBuf = FloatArray(4096)
+    private var stftOutRead = 0
+    private var stftOutWrite = 0
+
+    // Pre-allocated buffer for short↔float conversion
+    private var ncFloatBuf = FloatArray(1024)
+
+    // Visualization
     private var waveformView: WaveformView? = null
     private var spectrumView: SpectrumView? = null
     private var visualUpdateCounter = 0
-    private val visualUpdateFrequency = 16  // Update visuals every 16th frame (reduced from 8)
-    private val fftProcessor = FFTProcessor(512)  // Reduced from 1024 to 512 for faster processing
+    private val visualUpdateFrequency = 16  
+    private val fftProcessor = FFTProcessor(512)  
     private var fftUpdateCounter = 0
-    private val fftUpdateFrequency = 8  // Reduced from 4 to 8
+    private val fftUpdateFrequency = 8  
 
     data class EQBand(
         var frequency: Float = 1000f,
@@ -98,10 +156,16 @@ class AudioEngine(private val context: Context) {
         var b0: Float = 1f, var b1: Float = 0f, var b2: Float = 0f,
         var a1: Float = 0f, var a2: Float = 0f,
         var x1: Float = 0f, var x2: Float = 0f,
-        var y1: Float = 0f, var y2: Float = 0f
+        var y1: Float = 0f, var y2: Float = 0f,
+        var isStable: Boolean = true
     )
 
     init {
+        // Pre-compute Hann window coefficients
+        for (i in 0 until stftSize) {
+            hannWindow[i] = (0.5 * (1.0 - cos(2.0 * PI * i / stftSize))).toFloat()
+        }
+
         optimizeForLowLatency()
         initializeDefaultEQ()
     }
@@ -109,15 +173,12 @@ class AudioEngine(private val context: Context) {
     private fun optimizeForLowLatency() {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-        // Get native sample rate - crucial for low latency
         val nativeSampleRate = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)
-        sampleRate = nativeSampleRate?.toIntOrNull() ?: 48000  // Default to 48kHz if unavailable
+        sampleRate = nativeSampleRate?.toIntOrNull() ?: 48000  
 
-        // Get native buffer size
         val nativeBufferSize = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER)
-        val nativeFrames = nativeBufferSize?.toIntOrNull() ?: 128  // Reduced from 256 to 128
+        nativeFramesPerBuffer = nativeBufferSize?.toIntOrNull() ?: 128
 
-        // Calculate minimum buffer sizes for ultra-low latency
         val minRecordBuffer = AudioRecord.getMinBufferSize(
             sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
         )
@@ -126,19 +187,24 @@ class AudioEngine(private val context: Context) {
             sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
         )
 
-        // Use native frames directly for lowest possible latency
-        recordBufferSize = max(minRecordBuffer, nativeFrames * 2)
-        playBufferSize = max(minPlayBuffer, nativeFrames * 2)
+        recordBufferSize = max(minRecordBuffer, nativeFramesPerBuffer * 2)
+        playBufferSize = max(minPlayBuffer, nativeFramesPerBuffer * 2)
 
-        // Aggressive processing chunk size for minimal delay
-        processingChunkSize = nativeFrames.coerceAtMost(128)
+        processingChunkSize = if (lowLatencyMode) {
+            nativeFramesPerBuffer.coerceAtMost(128)
+        } else {
+            nativeFramesPerBuffer.coerceAtMost(512)
+        }
 
-        Log.d(TAG, "Ultra-low-latency: ${sampleRate}Hz, record: ${recordBufferSize}, play: ${playBufferSize}, chunk: $processingChunkSize frames (${processingChunkSize * 1000.0f / sampleRate}ms)")
+        if (ncFloatBuf.size < processingChunkSize) {
+            ncFloatBuf = FloatArray(processingChunkSize)
+        }
+
+        Log.d(TAG, "Ultra-low-latency: ${sampleRate}Hz, record: ${recordBufferSize}, play: ${playBufferSize}, chunk: $processingChunkSize frames")
     }
 
     private fun initializeDefaultEQ() {
-        // Start with 0 filters - user will add them dynamically
-        // No default bands
+        recalculateHeadroomCompensation()
     }
 
     @Throws(SecurityException::class)
@@ -146,10 +212,9 @@ class AudioEngine(private val context: Context) {
         if (isRecording) return
 
         try {
-            // Create ultra-low-latency AudioRecord
             audioRecord = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                 AudioRecord.Builder()
-                    .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)  // Optimized for low latency
+                    .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)  
                     .setAudioFormat(
                         AudioFormat.Builder()
                             .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
@@ -161,7 +226,7 @@ class AudioEngine(private val context: Context) {
                     .build()
             } else {
                 AudioRecord(
-                    MediaRecorder.AudioSource.VOICE_COMMUNICATION,  // Use low-latency source
+                    MediaRecorder.AudioSource.VOICE_COMMUNICATION,  
                     sampleRate,
                     AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT,
@@ -173,14 +238,13 @@ class AudioEngine(private val context: Context) {
                 throw IllegalStateException("AudioRecord failed to initialize")
             }
 
-            // Create ultra-low-latency AudioTrack
             audioTrack = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                 val builder = AudioTrack.Builder()
                     .setAudioAttributes(
                         AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)  // Changed for hearing aid use
+                            .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)  
                             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                            .setFlags(AudioAttributes.FLAG_LOW_LATENCY)  // Request low latency flag
+                            .setFlags(AudioAttributes.FLAG_LOW_LATENCY)  
                             .build()
                     )
                     .setAudioFormat(
@@ -216,8 +280,9 @@ class AudioEngine(private val context: Context) {
             audioRecord?.startRecording()
             audioTrack?.play()
             isRecording = true
+            isStopping = false
+            fadeFactor = 0.0f
 
-            // Ultra-high priority audio thread
             audioThread = Thread { processLowLatencyAudio() }
             audioThread?.start()
 
@@ -231,37 +296,30 @@ class AudioEngine(private val context: Context) {
     }
 
     private fun updateRealTimeVisualization(buffer: ShortArray, length: Int) {
-        // Update waveform visualization
         if (length > 0) {
             waveformView?.updateWaveform(buffer.copyOf(length))
         }
 
-        // Perform real FFT and update spectrum analyzer
         if (fftProcessor.isReady()) {
             val fftMagnitudes = fftProcessor.computeFFT()
             spectrumView?.updateSpectrum(fftMagnitudes)
         }
     }
 
-
     private fun processLowLatencyAudio() {
-        // Maximum audio thread priority for minimal latency
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
 
         val buffer = ShortArray(processingChunkSize)
         val originalBuffer = ShortArray(processingChunkSize)
-        
-        // Pre-calculate constant for performance
         val shortMaxInv = 1.0f / Short.MAX_VALUE
 
-        Log.d(TAG, "Ultra-low-latency processing started with ${processingChunkSize} sample chunks")
+        Log.d(TAG, "Ultra-low-latency processing loop active")
 
         while (isRecording) {
             try {
                 val bytesRead = audioRecord?.read(buffer, 0, processingChunkSize) ?: 0
 
                 if (bytesRead > 0) {
-                    // Only copy for visualization when needed (reduces overhead)
                     visualUpdateCounter++
                     val shouldUpdateVis = visualUpdateCounter >= visualUpdateFrequency
                     if (shouldUpdateVis) {
@@ -270,42 +328,65 @@ class AudioEngine(private val context: Context) {
                         visualUpdateCounter = 0
                     }
 
-                    // Apply noise canceling before other processing (works on entire buffer)
                     if (noiseCancelingEnabled) {
                         applyNoiseCanceling(buffer, bytesRead)
                     }
 
-                    // Optimized audio processing loop
+                    // Smooth gain parameter interpolation
+                    val gainStep = 0.002f
+                    
+                    // Smooth fade-in / fade-out ramping (10 ms)
+                    val fadeStep = 1.0f / (sampleRate * 0.010f)
+
                     for (i in 0 until bytesRead) {
+                        // Smoothly move current gain toward target
+                        if (currentAmplificationGain < targetAmplificationGain) {
+                            currentAmplificationGain = (currentAmplificationGain + gainStep).coerceAtMost(targetAmplificationGain)
+                        } else if (currentAmplificationGain > targetAmplificationGain) {
+                            currentAmplificationGain = (currentAmplificationGain - gainStep).coerceAtLeast(targetAmplificationGain)
+                        }
+
+                        // Ramp fade factor
+                        if (isStopping) {
+                            fadeFactor = (fadeFactor - fadeStep).coerceAtLeast(0.0f)
+                        } else if (fadeFactor < 1.0f) {
+                            fadeFactor = (fadeFactor + fadeStep).coerceAtMost(1.0f)
+                        }
+
                         var sample = buffer[i] * shortMaxInv
 
-                        // Apply noise gate (simplified)
+                        // Apply noise gate
                         if (abs(sample) < noiseGateThreshold) {
                             sample *= 0.1f
                         }
 
-                        // Apply EQ filters
-                        sample = applyStreamlinedEQ(sample)
+                        // Apply EQ filters with automatic headroom scaling
+                        sample = applyStreamlinedEQ(sample) * autoHeadroomScale
 
-                        // Apply compression (simplified)
+                        // Apply compression
                         if (abs(sample) > compressionThreshold) {
                             val compressedAbs = compressionThreshold +
                                     (abs(sample) - compressionThreshold) * compressionRatio
                             sample = if (sample >= 0) compressedAbs else -compressedAbs
                         }
 
-                        // Apply amplification and clipping
-                        sample = (sample * amplificationGain).coerceIn(-0.95f, 0.95f)
+                        // Apply amplification gain with acoustic feedback ducking & smooth fade
+                        sample *= (currentAmplificationGain * feedbackDuckingGain * fadeFactor)
+
+                        // Apply soft-knee limiter & safety output ceiling (prevents harsh linear clipping)
+                        sample = applySoftLimiter(sample)
 
                         buffer[i] = (sample * Short.MAX_VALUE).toInt()
                             .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
                             .toShort()
                     }
 
-                    // Write processed audio immediately (critical for low latency)
                     audioTrack?.write(buffer, 0, bytesRead)
 
-                    // Update visualizations less frequently to reduce CPU load
+                    if (isStopping && fadeFactor <= 0.0f) {
+                        break
+                    }
+
                     if (shouldUpdateVis) {
                         fftUpdateCounter++
                         if (fftUpdateCounter >= fftUpdateFrequency && fftProcessor.isReady()) {
@@ -322,6 +403,23 @@ class AudioEngine(private val context: Context) {
         }
     }
 
+    /**
+     * Soft-knee limiter with tanh saturation curve.
+     * Prevents harsh square-wave clipping at full volume.
+     * Enforces an absolute safety output ceiling at 0.92f (-0.7 dBFS).
+     */
+    private fun applySoftLimiter(sample: Float): Float {
+        val kneeThreshold = 0.70f // -3 dBFS threshold
+        val absSample = abs(sample)
+        if (absSample <= kneeThreshold) {
+            return sample
+        }
+        val over = absSample - kneeThreshold
+        val compressed = kneeThreshold + (1.0f - kneeThreshold) * tanh(over / (1.0f - kneeThreshold))
+        val limited = compressed.coerceIn(0f, 0.92f)
+        return if (sample >= 0f) limited else -limited
+    }
+
     private fun applyStreamlinedEQ(input: Float): Float {
         var output = input
         for (i in eqBands.indices) {
@@ -332,9 +430,19 @@ class AudioEngine(private val context: Context) {
         return output
     }
 
+    /**
+     * Process biquad filter with stability guard and denormal number protection.
+     */
     private fun processBiquadFilter(input: Float, filter: BiquadFilter): Float {
-        val output = filter.b0 * input + filter.b1 * filter.x1 + filter.b2 * filter.x2 -
+        if (!filter.isStable) return input
+
+        var output = filter.b0 * input + filter.b1 * filter.x1 + filter.b2 * filter.x2 -
                 filter.a1 * filter.y1 - filter.a2 * filter.y2
+
+        // Denormal guard: flush tiny sub-normal values to zero to prevent CPU slowdown/noise
+        if (abs(output) < 1e-15f) output = 0f
+        if (abs(filter.y1) < 1e-15f) filter.y1 = 0f
+        if (abs(filter.y2) < 1e-15f) filter.y2 = 0f
 
         filter.x2 = filter.x1
         filter.x1 = input
@@ -344,139 +452,288 @@ class AudioEngine(private val context: Context) {
         return output
     }
 
-    /**
-     * Apply noise canceling using spectral subtraction with Wiener filtering
-     * This processes a buffer of audio samples to reduce background noise
-     */
     private fun applyNoiseCanceling(buffer: ShortArray, length: Int) {
         if (!noiseCancelingEnabled || length < 2) return
 
-        // Convert to float array for processing
-        val floatBuffer = FloatArray(length)
         for (i in 0 until length) {
-            floatBuffer[i] = buffer[i].toFloat() / Short.MAX_VALUE
+            ncFloatBuf[i] = buffer[i].toFloat() / Short.MAX_VALUE
         }
 
-        // Perform FFT (using simple sliding window approach for real-time processing)
-        val fftSize = min(length, noiseProfileSize)
-        val magnitude = FloatArray(fftSize / 2)
-        val phase = FloatArray(fftSize / 2)
-        
-        // Simple magnitude spectrum estimation
-        for (i in 0 until fftSize / 2) {
-            val idx = i * 2
-            if (idx + 1 < length) {
-                val real = floatBuffer[idx]
-                val imag = floatBuffer[idx + 1]
-                magnitude[i] = sqrt(real * real + imag * imag)
-                phase[i] = atan2(imag, real)
+        for (i in 0 until length) {
+            stftInputBuf[stftFilled] = ncFloatBuf[i]
+            stftFilled++
+
+            if (stftFilled >= stftSize) {
+                processSTFTFrame()
+                System.arraycopy(stftInputBuf, stftHop, stftInputBuf, 0, stftSize - stftHop)
+                stftFilled = stftSize - stftHop
             }
         }
 
-        // Update noise profile if still learning
-        if (!noiseProfileLearned && noiseProfileSamples < maxNoiseProfileSamples) {
-            for (i in magnitude.indices) {
-                if (i < noiseProfile.size) {
-                    noiseProfile[i] += magnitude[i]
+        val available = stftFifoAvailable()
+        if (available >= length) {
+            for (i in 0 until length) {
+                val sample = stftOutBuf[stftOutRead]
+                stftOutRead = (stftOutRead + 1) % stftOutBuf.size
+                buffer[i] = (sample * Short.MAX_VALUE)
+                    .coerceIn(Short.MIN_VALUE.toFloat(), Short.MAX_VALUE.toFloat())
+                    .toInt().toShort()
+            }
+        }
+    }
+
+    private fun stftFifoAvailable(): Int {
+        return (stftOutWrite - stftOutRead + stftOutBuf.size) % stftOutBuf.size
+    }
+
+    private fun stftFifoPush(sample: Float) {
+        stftOutBuf[stftOutWrite] = sample
+        stftOutWrite = (stftOutWrite + 1) % stftOutBuf.size
+    }
+
+    private fun processSTFTFrame() {
+        for (i in 0 until stftSize) {
+            stftWorkReal[i] = (stftInputBuf[i] * hannWindow[i]).toDouble()
+            stftWorkImag[i] = 0.0
+        }
+
+        fftInPlace(stftWorkReal, stftWorkImag, inverse = false)
+
+        var totalMag = 0f
+        var maxBinMag = 0f
+        var maxBinIdx = 0
+
+        for (i in 0 until stftBins) {
+            val re = stftWorkReal[i]
+            val im = stftWorkImag[i]
+            val mag = sqrt((re * re + im * im).toFloat())
+            stftMag[i] = mag
+            stftPhase[i] = atan2(im.toFloat(), re.toFloat())
+
+            totalMag += mag
+            if (mag > maxBinMag) {
+                maxBinMag = mag
+                maxBinIdx = i
+            }
+        }
+
+        // Acoustic Feedback (Howling) Detector:
+        // If a single bin holds > 35% of total frame energy persistently over 8 frames (>40ms)
+        if (totalMag > 1.0f && (maxBinMag / totalMag) > 0.35f) {
+            consecutiveFeedbackFrames++
+            if (consecutiveFeedbackFrames >= 8) {
+                feedbackDuckingGain = 0.25f // Duck master gain by -12 dB
+                val freqHz = maxBinIdx * (sampleRate / 2.0f) / stftBins
+                val now = System.currentTimeMillis()
+                if (now - lastFeedbackTime > 3000) { // Limit notifications to once per 3s
+                    lastFeedbackTime = now
+                    feedbackEventListener?.onFeedbackDetected(freqHz)
                 }
             }
+        } else {
+            consecutiveFeedbackFrames = max(0, consecutiveFeedbackFrames - 1)
+            if (consecutiveFeedbackFrames == 0 && feedbackDuckingGain < 1.0f) {
+                feedbackDuckingGain = min(1.0f, feedbackDuckingGain + 0.05f) // Smoothly recover gain
+            }
+        }
+
+        val frameEnergy = computeFrameEnergy()
+
+        if (!noiseProfileLearned) {
+            for (i in 0 until stftBins) {
+                noiseProfile[i] += stftMag[i]
+            }
             noiseProfileSamples++
-            
+
             if (noiseProfileSamples >= maxNoiseProfileSamples) {
-                // Average the noise profile
-                for (i in noiseProfile.indices) {
+                for (i in 0 until stftBins) {
                     noiseProfile[i] /= maxNoiseProfileSamples
                 }
                 noiseProfileLearned = true
-                Log.d(TAG, "Noise profile learned")
+                Log.d(TAG, "Noise profile learned via STFT")
+            }
+        } else {
+            if (frameEnergy < noiseGateThreshold * 5f) {
+                for (i in 0 until stftBins) {
+                    noiseProfile[i] = (1f - adaptRate) * noiseProfile[i] + adaptRate * stftMag[i]
+                }
             }
         }
 
-        // Apply spectral subtraction with Wiener filtering
+        // 5. Decision-Directed A Priori SNR Estimation & Spectral Suppression (Ephraim-Malah style)
         if (noiseProfileLearned) {
-            for (i in magnitude.indices) {
-                if (i < noiseProfile.size) {
-                    // Wiener filter: gain = (signal^2) / (signal^2 + noise^2)
-                    val signalPower = magnitude[i] * magnitude[i]
-                    val noisePower = noiseProfile[i] * noiseProfile[i]
-                    val snr = signalPower / (signalPower + noisePower + 1e-10f)
-                    
-                    // Apply gain with smoothing
-                    val targetGain = max(spectralFloor, snr.pow(noiseCancelingStrength))
-                    wienerGains[i] = noiseEstimateSmoothing * wienerGains[i] + 
-                                     (1 - noiseEstimateSmoothing) * targetGain
-                    
-                    magnitude[i] *= wienerGains[i]
-                }
-            }
+            for (i in 0 until stftBins) {
+                val noisyPower = stftMag[i] * stftMag[i]
+                val noisePower = (noiseProfile[i] * noiseProfile[i] * overSubtractionFactor).coerceAtLeast(1e-10f)
 
-            // Reconstruct signal (simplified inverse transform)
-            for (i in 0 until fftSize / 2) {
-                val idx = i * 2
-                if (idx + 1 < length) {
-                    floatBuffer[idx] = magnitude[i] * cos(phase[i])
-                    floatBuffer[idx + 1] = magnitude[i] * sin(phase[i])
-                }
+                // A posteriori SNR: gamma_k = noisyPower / noisePower
+                val aPosterioriSnr = noisyPower / noisePower
+
+                // Decision-directed a priori SNR: xi_k = alpha * (prevCleanPower / noisePower) + (1-alpha) * max(aPosterioriSnr - 1, 0)
+                val prevCleanPower = prevCleanMag[i] * prevCleanMag[i]
+                val xi = alphaDD * (prevCleanPower / noisePower) + (1f - alphaDD) * (aPosterioriSnr - 1f).coerceAtLeast(0f)
+                aPrioriSnr[i] = xi
+
+                // Wiener gain based on a priori SNR: G_k = xi / (xi + 1)
+                val targetGain = (xi / (xi + 1.0f)).coerceAtLeast(spectralFloor)
+
+                // Apply noise canceling strength scaling
+                val finalGain = targetGain.pow(noiseCancelingStrength)
+
+                // Temporal gain smoothing
+                wienerGains[i] = noiseEstimateSmoothing * wienerGains[i] + (1f - noiseEstimateSmoothing) * finalGain
+
+                // Apply gain to magnitude
+                stftMag[i] *= wienerGains[i]
+
+                // Store clean magnitude for next frame's decision-directed SNR estimate
+                prevCleanMag[i] = stftMag[i]
             }
         }
 
-        // Convert back to short array
-        for (i in 0 until length) {
-            buffer[i] = (floatBuffer[i] * Short.MAX_VALUE)
-                .coerceIn(Short.MIN_VALUE.toFloat(), Short.MAX_VALUE.toFloat())
-                .toInt()
-                .toShort()
+        for (i in 0 until stftBins) {
+            stftWorkReal[i] = (stftMag[i] * cos(stftPhase[i])).toDouble()
+            stftWorkImag[i] = (stftMag[i] * sin(stftPhase[i])).toDouble()
+        }
+        for (i in 1 until stftSize / 2) {
+            stftWorkReal[stftSize - i] = stftWorkReal[i]
+            stftWorkImag[stftSize - i] = -stftWorkImag[i]
+        }
+
+        fftInPlace(stftWorkReal, stftWorkImag, inverse = true)
+
+        for (i in 0 until stftHop) {
+            val outputSample = stftWorkReal[i].toFloat() + olaBuffer[i]
+            stftFifoPush(outputSample)
+        }
+        for (i in 0 until stftHop) {
+            olaBuffer[i] = stftWorkReal[i + stftHop].toFloat()
         }
     }
 
     /**
-     * Reset the noise profile to relearn the background noise
+     * Sourced from AudioEngine STFT noise profile data.
+     * Computes the current background noise profile average magnitude in dB.
      */
+    fun getAverageNoiseLevelDb(): Float {
+        var sumMag = 0f
+        for (mag in noiseProfile) {
+            sumMag += mag
+        }
+        val avgMag = sumMag / stftBins
+        val db = 30f + (avgMag * 140f).coerceIn(0f, 65f)
+        return db
+    }
+
+    private fun computeFrameEnergy(): Float {
+        var energy = 0f
+        for (i in 0 until stftBins) {
+            energy += stftMag[i] * stftMag[i]
+        }
+        return sqrt(energy / stftBins)
+    }
+
+    private fun fftInPlace(real: DoubleArray, imag: DoubleArray, inverse: Boolean) {
+        val n = real.size
+
+        var j = 0
+        for (i in 0 until n) {
+            if (i < j) {
+                var tmp = real[i]; real[i] = real[j]; real[j] = tmp
+                tmp = imag[i]; imag[i] = imag[j]; imag[j] = tmp
+            }
+            var m = n / 2
+            while (m >= 1 && j >= m) {
+                j -= m
+                m /= 2
+            }
+            j += m
+        }
+
+        var mLen = 2
+        while (mLen <= n) {
+            val halfM = mLen / 2
+            val angle = (if (inverse) 2.0 else -2.0) * PI / mLen
+            val wReal = cos(angle)
+            val wImag = sin(angle)
+
+            var k = 0
+            while (k < n) {
+                var wrReal = 1.0
+                var wrImag = 0.0
+                for (jj in 0 until halfM) {
+                    val idx = k + jj + halfM
+                    val tReal = wrReal * real[idx] - wrImag * imag[idx]
+                    val tImag = wrReal * imag[idx] + wrImag * real[idx]
+                    real[idx] = real[k + jj] - tReal
+                    imag[idx] = imag[k + jj] - tImag
+                    real[k + jj] += tReal
+                    imag[k + jj] += tImag
+                    val newWr = wrReal * wReal - wrImag * wImag
+                    wrImag = wrReal * wImag + wrImag * wReal
+                    wrReal = newWr
+                }
+                k += mLen
+            }
+            mLen *= 2
+        }
+
+        if (inverse) {
+            val invN = 1.0 / n
+            for (i in 0 until n) {
+                real[i] *= invN
+                imag[i] *= invN
+            }
+        }
+    }
+
     private fun resetNoiseProfile() {
         noiseProfile.fill(0f)
         wienerGains.fill(1f)
+        prevCleanMag.fill(0f)
+        aPrioriSnr.fill(1f)
         noiseProfileSamples = 0
         noiseProfileLearned = false
-        Log.d(TAG, "Noise profile reset")
-    }
 
-    private fun updateVisualization(buffer: ShortArray, length: Int) {
-        // Only update if visualization is connected and we have data
-        if (length > 0) {
-            waveformView?.updateWaveform(buffer.copyOf(length))
-
-            // Simple spectrum calculation (reduced complexity)
-            if (length >= 32) {
-                val spectrum = FloatArray(32)
-                val step = length / 32
-                for (i in 0 until 32) {
-                    val index = i * step
-                    spectrum[i] = abs(buffer[index].toFloat()) / Short.MAX_VALUE
-                }
-                spectrumView?.updateSpectrum(spectrum)
-            }
-        }
+        stftInputBuf.fill(0f)
+        stftFilled = 0
+        olaBuffer.fill(0f)
+        stftOutRead = 0
+        stftOutWrite = 0
     }
 
     private fun updateAllFilters() {
         for (i in eqBands.indices) {
             updateBiquadCoefficients(i)
         }
+        recalculateHeadroomCompensation()
+    }
+
+    private fun recalculateHeadroomCompensation() {
+        var positiveGainSum = 0f
+        for (band in eqBands) {
+            if (band.enabled && band.gain > 0f) {
+                positiveGainSum += band.gain
+            }
+        }
+        autoHeadroomScale = 1.0f / (1.0f + 0.08f * positiveGainSum)
     }
 
     private fun updateBiquadCoefficients(bandIndex: Int) {
         val band = eqBands[bandIndex]
         val filter = filters[bandIndex]
 
+        // Clamp Q factor to <= 3.0 when gain > 6dB to prevent self-resonance whining
+        val effectiveQ = if (band.filterType == FilterType.PEAKING && band.gain > 6f) band.q.coerceAtMost(3.0f) else band.q
+
         val omega = 2 * PI * band.frequency / sampleRate
         val cosOmega = cos(omega).toFloat()
         val sinOmega = sin(omega).toFloat()
-        val alpha = sinOmega / (2 * band.q)
+        val alpha = sinOmega / (2 * effectiveQ)
         val A = 10.0.pow(band.gain / 40.0).toFloat()
 
         when (band.filterType) {
             FilterType.PEAKING -> {
-                // Peaking EQ filter coefficients
                 filter.b0 = 1 + alpha * A
                 filter.b1 = -2 * cosOmega
                 filter.b2 = 1 - alpha * A
@@ -488,7 +745,6 @@ class AudioEngine(private val context: Context) {
                 filter.b2 /= a0
             }
             FilterType.LOW_PASS -> {
-                // Low-pass filter coefficients
                 filter.b0 = (1 - cosOmega) / 2
                 filter.b1 = 1 - cosOmega
                 filter.b2 = (1 - cosOmega) / 2
@@ -500,7 +756,6 @@ class AudioEngine(private val context: Context) {
                 filter.b2 /= a0
             }
             FilterType.HIGH_PASS -> {
-                // High-pass filter coefficients
                 filter.b0 = (1 + cosOmega) / 2
                 filter.b1 = -(1 + cosOmega)
                 filter.b2 = (1 + cosOmega) / 2
@@ -512,7 +767,6 @@ class AudioEngine(private val context: Context) {
                 filter.b2 /= a0
             }
             FilterType.BAND_PASS -> {
-                // Band-pass filter coefficients (constant skirt gain)
                 filter.b0 = alpha
                 filter.b1 = 0f
                 filter.b2 = -alpha
@@ -524,7 +778,6 @@ class AudioEngine(private val context: Context) {
                 filter.b2 /= a0
             }
             FilterType.NOTCH -> {
-                // Notch (band-stop) filter coefficients
                 filter.b0 = 1f
                 filter.b1 = -2 * cosOmega
                 filter.b2 = 1f
@@ -536,7 +789,6 @@ class AudioEngine(private val context: Context) {
                 filter.b2 /= a0
             }
             FilterType.LOW_SHELF -> {
-                // Low-shelf filter coefficients
                 val sqrtA = sqrt(A)
                 filter.b0 = A * ((A + 1) - (A - 1) * cosOmega + 2 * sqrtA * alpha)
                 filter.b1 = 2 * A * ((A - 1) - (A + 1) * cosOmega)
@@ -549,7 +801,6 @@ class AudioEngine(private val context: Context) {
                 filter.b2 /= a0
             }
             FilterType.HIGH_SHELF -> {
-                // High-shelf filter coefficients
                 val sqrtA = sqrt(A)
                 filter.b0 = A * ((A + 1) + (A - 1) * cosOmega + 2 * sqrtA * alpha)
                 filter.b1 = -2 * A * ((A - 1) + (A + 1) * cosOmega)
@@ -562,9 +813,17 @@ class AudioEngine(private val context: Context) {
                 filter.b2 /= a0
             }
         }
+
+        // Biquad Stability Guard: Poles must lie inside unit circle (|a2| < 1.0 and |a1| < 1.0 + a2)
+        filter.isStable = abs(filter.a2) < 0.999f && abs(filter.a1) < (1.0f + filter.a2)
+        if (!filter.isStable) {
+            Log.w(TAG, "Unstable biquad coefficients at band $bandIndex (${band.frequency}Hz). Resetting to pass-through.")
+            filter.b0 = 1f; filter.b1 = 0f; filter.b2 = 0f
+            filter.a1 = 0f; filter.a2 = 0f
+            filter.isStable = true
+        }
     }
 
-    // Public API methods for EQ management
     fun setEQBand(bandIndex: Int, frequency: Float, gain: Float, q: Float, filterType: FilterType = FilterType.PEAKING) {
         if (bandIndex in eqBands.indices) {
             eqBands[bandIndex].frequency = frequency.coerceIn(20f, 20000f)
@@ -572,13 +831,10 @@ class AudioEngine(private val context: Context) {
             eqBands[bandIndex].q = q.coerceIn(0.1f, 10f)
             eqBands[bandIndex].filterType = filterType
             updateBiquadCoefficients(bandIndex)
+            recalculateHeadroomCompensation()
         }
     }
 
-    /**
-     * Add a new EQ band
-     * @return the index of the newly added band
-     */
     fun addEQBand(frequency: Float, gain: Float, q: Float, filterType: FilterType = FilterType.PEAKING): Int {
         val newBand = EQBand(
             frequency = frequency.coerceIn(20f, 20000f),
@@ -594,78 +850,50 @@ class AudioEngine(private val context: Context) {
         
         val newIndex = eqBands.size - 1
         updateBiquadCoefficients(newIndex)
+        recalculateHeadroomCompensation()
         
-        Log.d(TAG, "Added EQ band at ${frequency}Hz, index: $newIndex")
         return newIndex
     }
 
-    /**
-     * Remove an EQ band at the specified index
-     * @return true if removal was successful
-     */
     fun removeEQBand(bandIndex: Int): Boolean {
         if (bandIndex in eqBands.indices) {
             eqBands.removeAt(bandIndex)
             filters.removeAt(bandIndex)
-            Log.d(TAG, "Removed EQ band at index: $bandIndex")
+            recalculateHeadroomCompensation()
             return true
         }
         return false
     }
 
-    /**
-     * Get the number of current EQ bands
-     */
     fun getEQBandCount(): Int = eqBands.size
 
-    /**
-     * Get information about a specific EQ band
-     */
     fun getEQBand(bandIndex: Int): EQBand? {
         return if (bandIndex in eqBands.indices) {
             eqBands[bandIndex].copy()
         } else null
     }
 
-    /**
-     * Get all EQ bands
-     */
     fun getAllEQBands(): List<EQBand> {
         return eqBands.map { it.copy() }
     }
 
-    /**
-     * Clear all EQ bands
-     */
     fun clearAllEQBands() {
         eqBands.clear()
         filters.clear()
-        Log.d(TAG, "Cleared all EQ bands")
+        recalculateHeadroomCompensation()
     }
 
-    /**
-     * Apply a complete preset to the audio engine
-     */
     fun applyPreset(preset: EQPreset) {
-        // Clear existing bands
         clearAllEQBands()
-        
-        // Add bands from preset
         preset.filters.forEach { filter ->
             addEQBand(filter.frequency, filter.gain, filter.q, filter.filterType)
         }
-        
-        // Apply other settings
         setAmplification(preset.masterVolume)
         setNoiseGate(preset.noiseGateThreshold)
         setCompression(preset.compressionRatio, 0.6f)
-        
-        Log.d(TAG, "Applied preset: ${preset.name} with ${preset.filters.size} bands")
+        recalculateHeadroomCompensation()
     }
 
-    /**
-     * Get current state as a preset
-     */
     fun getCurrentState(presetName: String): EQPreset {
         val filterBands = eqBands.map { band ->
             EQPreset.FilterBand(
@@ -680,14 +908,14 @@ class AudioEngine(private val context: Context) {
         return EQPreset(
             name = presetName,
             filters = filterBands,
-            masterVolume = amplificationGain,
+            masterVolume = targetAmplificationGain,
             noiseGateThreshold = noiseGateThreshold,
             compressionRatio = compressionRatio
         )
     }
 
     fun setAmplification(gain: Float) {
-        amplificationGain = max(0.5f, min(gain, 4.0f))
+        targetAmplificationGain = max(0.5f, min(gain, 4.0f))
     }
 
     fun setNoiseGate(threshold: Float) {
@@ -699,42 +927,39 @@ class AudioEngine(private val context: Context) {
         compressionThreshold = threshold.coerceIn(0.1f, 1f)
     }
 
-    /**
-     * Enable or disable noise canceling
-     */
     fun setNoiseCanceling(enabled: Boolean) {
         if (enabled && !noiseCancelingEnabled) {
-            // Reset noise profile when enabling
             resetNoiseProfile()
         }
         noiseCancelingEnabled = enabled
-        Log.d(TAG, "Noise canceling ${if (enabled) "enabled" else "disabled"}")
     }
 
-    /**
-     * Set noise canceling strength (0.0 to 1.0)
-     * Higher values = more aggressive noise reduction
-     */
     fun setNoiseCancelingStrength(strength: Float) {
         noiseCancelingStrength = strength.coerceIn(0.0f, 1.0f)
-        Log.d(TAG, "Noise canceling strength set to $noiseCancelingStrength")
     }
 
-    /**
-     * Check if noise canceling is enabled
-     */
+    fun getNoiseCancelingStrength(): Float = noiseCancelingStrength
+
     fun isNoiseCancelingEnabled(): Boolean = noiseCancelingEnabled
 
-    /**
-     * Check if noise profile has been learned
-     */
     fun isNoiseProfileLearned(): Boolean = noiseProfileLearned
 
-    /**
-     * Manually reset the noise profile to relearn background noise
-     */
     fun resetNoiseCancelingProfile() {
         resetNoiseProfile()
+    }
+
+    fun isLowLatencyMode(): Boolean = lowLatencyMode
+
+    fun setLowLatencyMode(enabled: Boolean) {
+        lowLatencyMode = enabled
+        processingChunkSize = if (enabled) {
+            nativeFramesPerBuffer.coerceAtMost(128)
+        } else {
+            nativeFramesPerBuffer.coerceAtMost(512)
+        }
+        if (ncFloatBuf.size < processingChunkSize) {
+            ncFloatBuf = FloatArray(processingChunkSize)
+        }
     }
 
     fun setVisualizerViews(waveform: WaveformView?, spectrum: SpectrumView?) {
@@ -743,6 +968,16 @@ class AudioEngine(private val context: Context) {
     }
 
     fun stopAudioProcessing() {
+        if (!isRecording) return
+
+        isStopping = true
+        // Wait up to 100ms for smooth fade-out
+        var attempts = 0
+        while (fadeFactor > 0.0f && attempts < 10) {
+            try { Thread.sleep(10) } catch (e: Exception) {}
+            attempts++
+        }
+
         isRecording = false
 
         audioThread?.let { thread ->
@@ -752,9 +987,10 @@ class AudioEngine(private val context: Context) {
                 Log.e(TAG, "Thread interruption", e)
             }
         }
+        audioThread = null
 
         cleanup()
-        Log.d(TAG, "Low-latency audio processing stopped")
+        Log.d(TAG, "Audio processing stopped with fade-out")
     }
 
     private fun cleanup() {

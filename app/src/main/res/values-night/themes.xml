@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.HearingAidApp" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#FF88D982</item>
+        <item name="colorOnPrimary">#FF00390A</item>
+        <item name="colorPrimaryContainer">#FF005312</item>
+        <item name="colorOnPrimaryContainer">#FFCBFFC2</item>
+        <item name="colorSecondary">#FFB1CBD1</item>
+        <item name="colorOnSecondary">#FF1B3438</item>
+        <item name="colorSecondaryContainer">#FF334B4F</item>
+        <item name="colorOnSecondaryContainer">#FFCDE7ED</item>
+        <item name="colorTertiary">#FFBAC6EA</item>
+        <item name="colorOnTertiary">#FF24304D</item>
+        <item name="colorTertiaryContainer">#FF3A4664</item>
+        <item name="colorOnTertiaryContainer">#FFD9E2FF</item>
+        <item name="colorError">#FFFFB4AB</item>
+        <item name="colorOnError">#FF690005</item>
+        <item name="colorErrorContainer">#FF93000A</item>
+        <item name="colorOnErrorContainer">#FFFFDAD6</item>
+        <item name="colorSurface">#FF111413</item>
+        <item name="colorOnSurface">#FFE1E3E1</item>
+        <item name="colorSurfaceVariant">#FF40493D</item>
+        <item name="colorOnSurfaceVariant">#FFC0C9BA</item>
+        <item name="colorOutline">#FF8A9385</item>
+        <item name="colorOutlineVariant">#FF40493D</item>
+        <item name="android:colorBackground">#FF111413</item>
+        <item name="colorOnBackground">#FFE1E3E1</item>
+        <item name="colorSurfaceInverse">#FFE1E3E1</item>
+        <item name="colorOnSurfaceInverse">#FF191C1B</item>
+        <item name="colorPrimaryInverse">#FF1B6D24</item>
+        <item name="android:statusBarColor">#FF111413</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
+        <item name="android:navigationBarColor">#FF191C1B</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+    </style>
+</resources>
