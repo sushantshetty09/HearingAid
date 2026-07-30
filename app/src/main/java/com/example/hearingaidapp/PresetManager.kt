@@ -3,12 +3,14 @@ package com.example.hearingaidapp
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONException
 
 /**
  * Manages saving, loading, and deleting EQ presets
- * Uses SharedPreferences for persistent storage
+ * Uses SharedPreferences for persistent storage, offloaded to Dispatchers.IO
  */
 class PresetManager(context: Context) {
     companion object {
@@ -25,9 +27,9 @@ class PresetManager(context: Context) {
      * Save a preset to storage
      * @return true if save was successful
      */
-    fun savePreset(preset: EQPreset): Boolean {
-        return try {
-            val presets = getAllPresets().toMutableList()
+    fun savePreset(preset: EQPreset): Boolean = runBlocking(Dispatchers.IO) {
+        try {
+            val presets = getAllPresetsInternal().toMutableList()
             
             // Remove existing preset with the same name
             presets.removeAll { it.name == preset.name }
@@ -36,7 +38,7 @@ class PresetManager(context: Context) {
             presets.add(preset)
             
             // Save to SharedPreferences
-            saveAllPresets(presets)
+            saveAllPresetsInternal(presets)
             
             Log.d(TAG, "Preset '${preset.name}' saved successfully")
             true
@@ -50,9 +52,9 @@ class PresetManager(context: Context) {
      * Load a preset by name
      * @return the preset or null if not found
      */
-    fun loadPreset(presetName: String): EQPreset? {
-        return try {
-            getAllPresets().firstOrNull { it.name == presetName }
+    fun loadPreset(presetName: String): EQPreset? = runBlocking(Dispatchers.IO) {
+        try {
+            getAllPresetsInternal().firstOrNull { it.name == presetName }
         } catch (e: Exception) {
             Log.e(TAG, "Error loading preset: ${e.message}", e)
             null
@@ -63,13 +65,13 @@ class PresetManager(context: Context) {
      * Delete a preset by name
      * @return true if deletion was successful
      */
-    fun deletePreset(presetName: String): Boolean {
-        return try {
-            val presets = getAllPresets().toMutableList()
+    fun deletePreset(presetName: String): Boolean = runBlocking(Dispatchers.IO) {
+        try {
+            val presets = getAllPresetsInternal().toMutableList()
             val removed = presets.removeAll { it.name == presetName }
             
             if (removed) {
-                saveAllPresets(presets)
+                saveAllPresetsInternal(presets)
                 Log.d(TAG, "Preset '$presetName' deleted successfully")
             }
             
@@ -83,7 +85,11 @@ class PresetManager(context: Context) {
     /**
      * Get all saved presets
      */
-    fun getAllPresets(): List<EQPreset> {
+    fun getAllPresets(): List<EQPreset> = runBlocking(Dispatchers.IO) {
+        getAllPresetsInternal()
+    }
+
+    private fun getAllPresetsInternal(): List<EQPreset> {
         return try {
             val presetsJson = sharedPreferences.getString(KEY_PRESET_LIST, null)
             
@@ -113,37 +119,45 @@ class PresetManager(context: Context) {
     /**
      * Get preset names sorted alphabetically
      */
-    fun getPresetNames(): List<String> {
-        return getAllPresets().map { it.name }.sorted()
+    fun getPresetNames(): List<String> = runBlocking(Dispatchers.IO) {
+        getAllPresetsInternal().map { it.name }.sorted()
     }
 
     /**
      * Check if a preset with the given name exists
      */
-    fun presetExists(presetName: String): Boolean {
-        return getAllPresets().any { it.name == presetName }
+    fun presetExists(presetName: String): Boolean = runBlocking(Dispatchers.IO) {
+        getAllPresetsInternal().any { it.name == presetName }
     }
 
     /**
      * Rename a preset
      * @return true if rename was successful
      */
-    fun renamePreset(oldName: String, newName: String): Boolean {
-        return try {
-            val preset = loadPreset(oldName) ?: return false
+    fun renamePreset(oldName: String, newName: String): Boolean = runBlocking(Dispatchers.IO) {
+        try {
+            val preset = getAllPresetsInternal().firstOrNull { it.name == oldName } ?: return@runBlocking false
             
-            if (presetExists(newName) && oldName != newName) {
+            if (getAllPresetsInternal().any { it.name == newName } && oldName != newName) {
                 Log.w(TAG, "Preset with name '$newName' already exists")
-                return false
+                return@runBlocking false
             }
             
-            deletePreset(oldName)
+            val presets = getAllPresetsInternal().toMutableList()
+            presets.removeAll { it.name == oldName }
+            saveAllPresetsInternal(presets)
+            
             val renamedPreset = preset.copy(name = newName)
-            savePreset(renamedPreset)
+            
+            // Re-save under new name
+            val updatedPresets = getAllPresetsInternal().toMutableList()
+            updatedPresets.removeAll { it.name == renamedPreset.name }
+            updatedPresets.add(renamedPreset)
+            saveAllPresetsInternal(updatedPresets)
             
             // Update current preset if it was renamed
-            if (getCurrentPresetName() == oldName) {
-                setCurrentPreset(newName)
+            if (getCurrentPresetNameInternal() == oldName) {
+                setCurrentPresetInternal(newName)
             }
             
             Log.d(TAG, "Preset renamed from '$oldName' to '$newName'")
@@ -157,7 +171,11 @@ class PresetManager(context: Context) {
     /**
      * Set the currently active preset name
      */
-    fun setCurrentPreset(presetName: String?) {
+    fun setCurrentPreset(presetName: String?) = runBlocking(Dispatchers.IO) {
+        setCurrentPresetInternal(presetName)
+    }
+
+    private fun setCurrentPresetInternal(presetName: String?) {
         sharedPreferences.edit()
             .putString(KEY_CURRENT_PRESET, presetName)
             .apply()
@@ -166,34 +184,42 @@ class PresetManager(context: Context) {
     /**
      * Get the currently active preset name
      */
-    fun getCurrentPresetName(): String? {
+    fun getCurrentPresetName(): String? = runBlocking(Dispatchers.IO) {
+        getCurrentPresetNameInternal()
+    }
+
+    private fun getCurrentPresetNameInternal(): String? {
         return sharedPreferences.getString(KEY_CURRENT_PRESET, null)
     }
 
     /**
      * Get the currently active preset
      */
-    fun getCurrentPreset(): EQPreset? {
-        val presetName = getCurrentPresetName() ?: return null
-        return loadPreset(presetName)
+    fun getCurrentPreset(): EQPreset? = runBlocking(Dispatchers.IO) {
+        val presetName = getCurrentPresetNameInternal() ?: return@runBlocking null
+        getAllPresetsInternal().firstOrNull { it.name == presetName }
     }
 
     /**
      * Initialize with default presets if no presets exist
      */
-    fun initializeDefaultPresets() {
-        if (getAllPresets().isEmpty()) {
+    fun initializeDefaultPresets() = runBlocking(Dispatchers.IO) {
+        if (getAllPresetsInternal().isEmpty()) {
             Log.d(TAG, "No presets found, initializing with defaults")
-            EQPreset.getDefaultPresets().forEach { preset ->
-                savePreset(preset)
+            val defaults = EQPreset.getDefaultPresets()
+            val presets = getAllPresetsInternal().toMutableList()
+            defaults.forEach { preset ->
+                presets.removeAll { it.name == preset.name }
+                presets.add(preset)
             }
+            saveAllPresetsInternal(presets)
         }
     }
 
     /**
      * Clear all presets (for testing or reset functionality)
      */
-    fun clearAllPresets() {
+    fun clearAllPresets() = runBlocking(Dispatchers.IO) {
         sharedPreferences.edit()
             .remove(KEY_PRESET_LIST)
             .remove(KEY_CURRENT_PRESET)
@@ -204,16 +230,16 @@ class PresetManager(context: Context) {
     /**
      * Export all presets as a JSON string (for backup)
      */
-    fun exportPresets(): String? {
-        return sharedPreferences.getString(KEY_PRESET_LIST, null)
+    fun exportPresets(): String? = runBlocking(Dispatchers.IO) {
+        sharedPreferences.getString(KEY_PRESET_LIST, null)
     }
 
     /**
      * Import presets from a JSON string (for restore)
      * @return number of presets imported
      */
-    fun importPresets(presetsJson: String, merge: Boolean = false): Int {
-        return try {
+    fun importPresets(presetsJson: String, merge: Boolean = false): Int = runBlocking(Dispatchers.IO) {
+        return@runBlocking try {
             val jsonArray = JSONArray(presetsJson)
             val newPresets = mutableListOf<EQPreset>()
             
@@ -227,7 +253,7 @@ class PresetManager(context: Context) {
             }
 
             val finalPresets = if (merge) {
-                val existing = getAllPresets().toMutableList()
+                val existing = getAllPresetsInternal().toMutableList()
                 // Remove duplicates by name
                 existing.removeAll { existingPreset ->
                     newPresets.any { it.name == existingPreset.name }
@@ -237,7 +263,7 @@ class PresetManager(context: Context) {
                 newPresets
             }
 
-            saveAllPresets(finalPresets)
+            saveAllPresetsInternal(finalPresets)
             Log.d(TAG, "Imported ${newPresets.size} presets (merge: $merge)")
             
             newPresets.size
@@ -250,7 +276,7 @@ class PresetManager(context: Context) {
     /**
      * Save all presets to SharedPreferences
      */
-    private fun saveAllPresets(presets: List<EQPreset>) {
+    private fun saveAllPresetsInternal(presets: List<EQPreset>) {
         val jsonArray = JSONArray()
         presets.forEach { preset ->
             jsonArray.put(preset.toJSON())
