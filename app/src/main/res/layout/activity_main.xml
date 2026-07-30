@@ -190,73 +190,52 @@
                 </FrameLayout>
             </LinearLayout>
 
-            <!-- LIVE SIGNAL CARD -->
+            <!-- LIVE SIGNAL CARDS (Separated) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 android:background="@drawable/bg_visualizer_card"
-                android:minHeight="240dp"
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <LinearLayout
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Live Signal"
-                        android:textColor="#FFFFFF"
-                        android:textSize="22sp" />
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="#1AFFFFFF"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="4dp"
-                            android:text="WAVEFORM"
-                            android:textColor="#B3FFFFFF"
-                            android:textSize="12sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:background="@color/primary_container"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="4dp"
-                            android:text="SPECTRUM"
-                            android:textColor="#FFFFFF"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-                </LinearLayout>
+                    android:layout_marginBottom="12dp"
+                    android:text="Spectrum Analyzer"
+                    android:textColor="#FFFFFF"
+                    android:textSize="20sp" />
 
                 <com.example.hearingaidapp.SpectrumView
                     android:id="@+id/spectrumView"
                     android:layout_width="match_parent"
                     android:layout_height="128dp"
-                    android:layout_marginTop="16dp"
                     android:background="@android:color/transparent" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/bg_visualizer_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="Live Waveform"
+                    android:textColor="#FFFFFF"
+                    android:textSize="20sp" />
 
                 <com.example.hearingaidapp.WaveformView
                     android:id="@+id/waveformView"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="8dp"
+                    android:layout_height="80dp"
                     android:background="@android:color/transparent" />
             </LinearLayout>
-
             <!-- 2-COLUMN GRID -->
             <LinearLayout
                 android:layout_width="match_parent"
