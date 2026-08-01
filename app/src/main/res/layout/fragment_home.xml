@@ -119,72 +119,127 @@
                 android:gravity="center" />
         </LinearLayout>
 
-        <!-- LIVE SIGNAL CARD -->
-        <LinearLayout
+        <!-- SEGREGATED CARD 1: WAVEFORM OSCILLOSCOPE -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:background="@drawable/bg_visualizer_card"
-            android:minHeight="240dp"
-            android:orientation="vertical"
-            android:padding="16dp">
+            app:cardBackgroundColor="#121D1D"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:strokeColor="#3300E676"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Live Signal"
-                    android:textColor="#FFFFFF"
-                    android:textSize="22sp" />
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="#1AFFFFFF"
-                        android:paddingHorizontal="8dp"
-                        android:paddingVertical="4dp"
-                        android:text="WAVEFORM"
-                        android:textColor="#B3FFFFFF"
-                        android:textSize="12sp" />
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_equalizer"
+                        app:tint="#00E676" />
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@color/primary_container"
-                        android:paddingHorizontal="8dp"
-                        android:paddingVertical="4dp"
-                        android:text="SPECTRUM"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Waveform Oscilloscope"
                         android:textColor="#FFFFFF"
-                        android:textSize="12sp" />
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="#2600E676"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="4dp"
+                        android:text="TIME DOMAIN"
+                        android:textColor="#00E676"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
+
+                <com.example.hearingaidapp.WaveformView
+                    android:id="@+id/waveformView"
+                    android:layout_width="match_parent"
+                    android:layout_height="110dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@android:color/transparent" />
             </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-            <com.example.hearingaidapp.SpectrumView
-                android:id="@+id/spectrumView"
-                android:layout_width="match_parent"
-                android:layout_height="128dp"
-                android:layout_marginTop="16dp"
-                android:background="@android:color/transparent" />
+        <!-- SEGREGATED CARD 2: SPECTRUM ANALYZER -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="#121D1D"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:strokeColor="#3300E5FF"
+            app:strokeWidth="1dp">
 
-            <com.example.hearingaidapp.WaveformView
-                android:id="@+id/waveformView"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="8dp"
-                android:background="@android:color/transparent" />
-        </LinearLayout>
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_analytics"
+                        app:tint="#00E5FF" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Frequency Spectrum"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="#2600E5FF"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="4dp"
+                        android:text="48 BINS (60Hz - 16kHz)"
+                        android:textColor="#00E5FF"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <com.example.hearingaidapp.SpectrumView
+                    android:id="@+id/spectrumView"
+                    android:layout_width="match_parent"
+                    android:layout_height="130dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@android:color/transparent" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- 2-COLUMN GRID -->
         <LinearLayout

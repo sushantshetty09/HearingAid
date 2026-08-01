@@ -17,60 +17,68 @@ class SpectrumView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
 
-    private val backgroundPaint = Paint().apply {
-        color = Color.TRANSPARENT
+    private val peakPaint = Paint().apply {
+        color = Color.parseColor("#00E5FF")
+        isAntiAlias = true
         style = Paint.Style.FILL
     }
 
-    private val textPaint = Paint().apply {
-        color = Color.parseColor("#A3F69C")
-        textSize = 20f
-        isAntiAlias = true
-    }
-
     private val gridPaint = Paint().apply {
-        color = Color.parseColor("#0A3A3A")
+        color = Color.parseColor("#1A00E5FF")
         strokeWidth = 1f
         isAntiAlias = true
     }
 
-    private val numBars = 64  // More bars for better resolution
+    private val labelPaint = Paint().apply {
+        color = Color.parseColor("#B3FFFFFF")
+        textSize = 20f
+        isAntiAlias = true
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+
+    private val numBars = 48
     private val magnitudes = FloatArray(numBars)
     private val smoothedMagnitudes = FloatArray(numBars)
-    private val frequencyLabels = arrayOf("60Hz", "125Hz", "250Hz", "500Hz", "1kHz", "2kHz", "4kHz", "8kHz", "16kHz")
+    private val peakMagnitudes = FloatArray(numBars)
 
-    // Color gradient for frequency spectrum
-    private val colors = intArrayOf(
-        Color.parseColor("#558B2F"),
-        Color.parseColor("#689F38"),
-        Color.parseColor("#7CB342"),
-        Color.parseColor("#88D982"),
-        Color.parseColor("#A3F69C"),
-        Color.parseColor("#88D982"),
-        Color.parseColor("#7CB342"),
-        Color.parseColor("#689F38"),
-        Color.parseColor("#558B2F"),
-        Color.parseColor("#33691E")
+    // Logarithmic frequency labels for the bottom axis
+    private val freqLabels = arrayOf("60Hz", "250Hz", "1kHz", "4kHz", "16kHz")
+    private val freqPositions = floatArrayOf(0.08f, 0.28f, 0.50f, 0.72f, 0.92f)
+
+    // Color gradient for spectrum bars across frequency spectrum
+    private val barColors = intArrayOf(
+        Color.parseColor("#0288D1"), // Deep Blue (Sub-bass)
+        Color.parseColor("#00ACC1"), // Cyan (Bass)
+        Color.parseColor("#00E676"), // Emerald Green (Low Mid)
+        Color.parseColor("#76FF03"), // Lime Green (Mid)
+        Color.parseColor("#FFD600"), // Gold (High Mid)
+        Color.parseColor("#FF1744")  // Crimson Red (Treble)
     )
 
     fun updateSpectrum(fftMagnitudes: FloatArray) {
         if (fftMagnitudes.isEmpty()) return
 
-        // Map FFT bins to display bars with logarithmic frequency scaling
         for (i in 0 until numBars) {
-            // Logarithmic frequency mapping for better visualization
             val logIndex = (exp(i.toDouble() / numBars * ln(fftMagnitudes.size.toDouble())) - 1).toInt()
                 .coerceIn(0, fftMagnitudes.size - 1)
 
-            // Apply logarithmic scaling to magnitude (dB scale)
-            val magnitude = if (fftMagnitudes[logIndex] > 0) {
-                20 * log10(fftMagnitudes[logIndex] + 1e-10) / 60.0 + 1.0  // Normalize to 0-1 range
+            val rawMag = fftMagnitudes[logIndex]
+            val dbNormalized = if (rawMag > 0.0001f) {
+                (20 * log10(rawMag.toDouble()) + 60.0) / 60.0
             } else 0.0
 
-            magnitudes[i] = magnitude.toFloat().coerceIn(0f, 1f)
+            val clamped = dbNormalized.toFloat().coerceIn(0.05f, 1.0f)
+            magnitudes[i] = clamped
 
-            // Smooth the display for less jittery visualization
-            smoothedMagnitudes[i] = smoothedMagnitudes[i] * 0.7f + magnitudes[i] * 0.3f
+            smoothedMagnitudes[i] = smoothedMagnitudes[i] * 0.65f + magnitudes[i] * 0.35f
+
+            // Peak hold decay calculation
+            if (smoothedMagnitudes[i] > peakMagnitudes[i]) {
+                peakMagnitudes[i] = smoothedMagnitudes[i]
+            } else {
+                peakMagnitudes[i] = (peakMagnitudes[i] - 0.02f).coerceAtLeast(smoothedMagnitudes[i])
+            }
         }
 
         post { invalidate() }
@@ -81,42 +89,41 @@ class SpectrumView @JvmOverloads constructor(
 
         val width = width.toFloat()
         val height = height.toFloat()
+        val bottomMargin = 28f
+        val usableHeight = height - bottomMargin
 
-        // Draw background
-        canvas.drawRect(0f, 0f, width, height, backgroundPaint)
-
-        // Draw frequency grid lines
-        val gridLines = 5
-        for (i in 1 until gridLines) {
-            val y = height - (height / gridLines) * i
+        // Draw horizontal grid lines
+        val gridRows = 4
+        for (i in 1 until gridRows) {
+            val y = usableHeight - (usableHeight / gridRows) * i
             canvas.drawLine(0f, y, width, y, gridPaint)
         }
 
         // Draw spectrum bars
         val barWidth = width / numBars
-        val padding = barWidth * 0.1f
+        val padding = barWidth * 0.15f
 
         for (i in 0 until numBars) {
-            val barHeight = smoothedMagnitudes[i] * height * 0.9f
+            val barHeight = smoothedMagnitudes[i] * usableHeight * 0.9f
             val x = i * barWidth + padding
-            val y = height - barHeight
+            val y = usableHeight - barHeight
 
-            // Choose color based on frequency (lower index = lower frequency)
-            val colorIndex = (i.toFloat() / numBars * colors.size).toInt()
-                .coerceIn(0, colors.size - 1)
-            barPaint.color = colors[colorIndex]
+            val colorFraction = i.toFloat() / (numBars - 1)
+            val colorIdx = (colorFraction * (barColors.size - 1)).toInt()
+            barPaint.color = barColors[colorIdx]
 
-            // Draw the bar with rounded top
-            val rect = RectF(x, y, x + barWidth - padding, height)
-            canvas.drawRoundRect(rect, 6f, 6f, barPaint)
+            val rect = RectF(x, y, x + barWidth - padding * 2, usableHeight)
+            canvas.drawRoundRect(rect, 4f, 4f, barPaint)
 
-            // Add peak dots for high values
-            if (smoothedMagnitudes[i] > 0.8f) {
-                barPaint.color = Color.parseColor("#A3F69C")
-                canvas.drawCircle(x + (barWidth - padding) / 2, y - 5f, 3f, barPaint)
-                barPaint.color = colors[colorIndex] // Reset color
-            }
+            // Draw Peak hold dots
+            val peakY = usableHeight - (peakMagnitudes[i] * usableHeight * 0.9f) - 4f
+            canvas.drawCircle(x + (barWidth - padding * 2) / 2, peakY.coerceAtLeast(4f), 3f, peakPaint)
         }
 
+        // Draw Bottom Frequency Axis Labels
+        for (idx in freqLabels.indices) {
+            val labelX = width * freqPositions[idx]
+            canvas.drawText(freqLabels[idx], labelX, height - 6f, labelPaint)
+        }
     }
 }

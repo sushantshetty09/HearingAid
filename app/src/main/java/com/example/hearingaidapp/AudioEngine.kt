@@ -139,10 +139,10 @@ class AudioEngine(private val context: Context) {
     private var waveformView: WaveformView? = null
     private var spectrumView: SpectrumView? = null
     private var visualUpdateCounter = 0
-    private val visualUpdateFrequency = 16  
+    private val visualUpdateFrequency = 2 // Update visuals every 2 chunks (~5ms) for 60 FPS
     private val fftProcessor = FFTProcessor(512)  
     private var fftUpdateCounter = 0
-    private val fftUpdateFrequency = 8  
+    private val fftUpdateFrequency = 2  
 
     data class EQBand(
         var frequency: Float = 1000f,
@@ -388,11 +388,7 @@ class AudioEngine(private val context: Context) {
                     }
 
                     if (shouldUpdateVis) {
-                        fftUpdateCounter++
-                        if (fftUpdateCounter >= fftUpdateFrequency && fftProcessor.isReady()) {
-                            updateRealTimeVisualization(originalBuffer, bytesRead)
-                            fftUpdateCounter = 0
-                        }
+                        updateRealTimeVisualization(originalBuffer, bytesRead)
                     }
                 }
 
