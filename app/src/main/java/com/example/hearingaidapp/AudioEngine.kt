@@ -248,16 +248,16 @@ class AudioEngine(private val context: Context) {
     private var noiseProfileSamples = 0
     private val maxNoiseProfileSamples = 50
     private var noiseProfileLearned = false
-    private val spectralFloor = 0.01f         // Minimum gain to prevent complete silence
-    private var noiseEstimateSmoothing = 0.9f // Smoothing factor for Wiener gain updates
-    private var overSubtractionFactor = 2.0f  // 1.5–3.0x on noise power for aggressive suppression
+    private val spectralFloor = 0.16f         // Optimal floor: reduces noise hum by ~84% while preserving speech and comfort
+    private var noiseEstimateSmoothing = 0.85f // Fast, natural gain response
+    private var overSubtractionFactor = 1.35f // Gentle over-subtraction: removes background noise without suppressing speech
     private val adaptRate = 0.01f             // Slow adaptation rate for voice-activity-aware updates
 
     // Wiener filter gains & decision-directed a priori SNR buffers (Ephraim-Malah style)
     private var wienerGains = FloatArray(stftBins) { 1f }
     private var prevCleanMag = FloatArray(stftBins) { 0f }
     private var aPrioriSnr = FloatArray(stftBins) { 1f }
-    private val alphaDD = 0.92f // Decision-directed temporal smoothing factor
+    private val alphaDD = 0.95f // Decision-directed temporal smoothing factor (stable, artifact-free speech tracking)
 
     // Pre-allocated Hann window (computed once at init)
     private val hannWindow = FloatArray(stftSize)
@@ -756,11 +756,13 @@ class AudioEngine(private val context: Context) {
                 val xi = alphaDD * (prevCleanPower / noisePower) + (1f - alphaDD) * (aPosterioriSnr - 1f).coerceAtLeast(0f)
                 aPrioriSnr[i] = xi
 
-                // Wiener gain based on a priori SNR: G_k = xi / (xi + 1)
-                val targetGain = (xi / (xi + 1.0f)).coerceAtLeast(spectralFloor)
+                // Optimal speech-preserving Wiener gain:
+                // Soft square-root transition preserves subtle speech cues and eliminates metallic musical noise
+                val wienerRaw = xi / (xi + 1.0f)
+                val targetGain = (kotlin.math.sqrt(wienerRaw) * (1f - spectralFloor) + spectralFloor).coerceIn(spectralFloor, 1.0f)
 
-                // Apply noise canceling strength scaling
-                val finalGain = targetGain.pow(noiseCancelingStrength)
+                // Balanced strength curve: scales noise reduction gracefully without vanishing ambient sounds
+                val finalGain = targetGain.pow(noiseCancelingStrength * 0.55f + 0.45f)
 
                 // Temporal gain smoothing
                 wienerGains[i] = noiseEstimateSmoothing * wienerGains[i] + (1f - noiseEstimateSmoothing) * finalGain

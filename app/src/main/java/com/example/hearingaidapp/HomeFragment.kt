@@ -67,6 +67,11 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
     private lateinit var advancedSection: View
     private lateinit var advancedHeader: View
 
+    // Meeting Recorder
+    private lateinit var btnToggleRecording: com.google.android.material.button.MaterialButton
+    private lateinit var tvRecordingStatus: TextView
+    private var recordingManager: RecordingManager? = null
+
     private val mainActivity: MainActivity
         get() = activity as MainActivity
 
@@ -183,11 +188,75 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
 
         advancedSection = view.findViewById(R.id.advancedSection)
         advancedHeader = view.findViewById(R.id.advancedHeader)
+
+        btnToggleRecording = view.findViewById(R.id.btnToggleRecording)
+        tvRecordingStatus = view.findViewById(R.id.tvRecordingStatus)
     }
 
     private fun setupListeners(view: View) {
         btnToggle.setOnClickListener {
-            mainActivity.toggleHearingAid()
+            if (!mainActivity.isHearingAidRunning() && !mainActivity.isBluetoothAudioConnected()) {
+                androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("Connect Bluetooth Headphones")
+                    .setMessage("For optimal hearing and to prevent acoustic feedback, please connect your Bluetooth headphones or earbuds.\n\nNo Bluetooth audio device is currently connected.")
+                    .setPositiveButton("Start Anyway") { _, _ ->
+                        mainActivity.toggleHearingAid()
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            } else {
+                mainActivity.toggleHearingAid()
+            }
+        }
+
+        btnToggleRecording.setOnClickListener {
+            val rm = recordingManager ?: RecordingManager(requireContext()).also { recordingManager = it }
+            if (!rm.isActive) {
+                rm.setListener(object : RecordingManager.RecordingListener {
+                    override fun onRecordingStarted() {
+                        activity?.runOnUiThread {
+                            btnToggleRecording.text = "Stop"
+                            btnToggleRecording.setIconResource(R.drawable.ic_equalizer)
+                            tvRecordingStatus.text = "Recording meeting... tap Stop to save"
+                        }
+                    }
+
+                    override fun onRecordingStopped(file: java.io.File) {
+                        activity?.runOnUiThread {
+                            btnToggleRecording.text = "Record"
+                            btnToggleRecording.setIconResource(R.drawable.ic_mic)
+                            tvRecordingStatus.text = "Saved: ${file.name}"
+                            try {
+                                val uri = androidx.core.content.FileProvider.getUriForFile(
+                                    requireContext(),
+                                    "${requireContext().packageName}.provider",
+                                    file
+                                )
+                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "audio/wav"
+                                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                startActivity(android.content.Intent.createChooser(shareIntent, "Share or Review Recording"))
+                            } catch (e: Exception) {
+                                android.widget.Toast.makeText(requireContext(), "Saved to ${file.name}", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+
+                    override fun onRecordingError(message: String) {
+                        activity?.runOnUiThread {
+                            btnToggleRecording.text = "Record"
+                            btnToggleRecording.setIconResource(R.drawable.ic_mic)
+                            tvRecordingStatus.text = message
+                            android.widget.Toast.makeText(requireContext(), message, android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                })
+                rm.startRecording()
+            } else {
+                rm.stopRecording()
+            }
         }
 
         advancedHeader.setOnClickListener {
@@ -754,5 +823,11 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
         }
 
         dialog.show()
+    }
+
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        recordingManager?.stopRecording()
     }
 }

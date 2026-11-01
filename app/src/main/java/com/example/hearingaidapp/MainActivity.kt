@@ -18,6 +18,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.net.Uri
 import android.content.Intent
 import org.json.JSONArray
@@ -370,6 +372,16 @@ class MainActivity : AppCompatActivity() {
                 dialog.dismiss()
             }
             .show()
+    }
+
+    fun isBluetoothAudioConnected(): Boolean {
+        return try {
+            val bm = getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+            val adapter = bm?.adapter ?: return false
+            if (!adapter.isEnabled) return false
+            adapter.getProfileConnectionState(BluetoothProfile.A2DP) == BluetoothProfile.STATE_CONNECTED ||
+            adapter.getProfileConnectionState(BluetoothProfile.HEADSET) == BluetoothProfile.STATE_CONNECTED
+        } catch (e: Exception) { false }
     }
 
     override fun onDestroy() {

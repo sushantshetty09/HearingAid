@@ -11,85 +11,95 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- USER INFORMATION CARD -->
+        <!-- USER PROFILE CARD -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="12dp"
+            app:cardCornerRadius="16dp"
             app:cardElevation="2dp"
             app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
-
-                <FrameLayout
-                    android:id="@+id/btnProfilePic"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
-                    android:background="@drawable/bg_chip_active"
-                    android:padding="2dp"
-                    android:clickable="true"
-                    android:focusable="true">
-                    <ImageView
-                        android:id="@+id/ivProfilePic"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:src="@drawable/ic_spatial_audio"
-                        android:scaleType="centerCrop"
-                        app:tint="@color/on_primary" />
-                </FrameLayout>
+                android:orientation="vertical"
+                android:padding="20dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                    <TextView
-                        android:id="@+id/tvProfileName"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="John Doe"
-                        android:fontFamily="sans-serif-medium"
-                        android:textColor="@color/on_surface"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
+                    <!-- Profile Picture Frame -->
+                    <FrameLayout
+                        android:id="@+id/btnProfilePic"
+                        android:layout_width="72dp"
+                        android:layout_height="72dp"
+                        android:background="@drawable/bg_chip_active"
+                        android:clickable="true"
+                        android:contentDescription="Profile picture, tap to change"
+                        android:focusable="true"
+                        android:padding="2dp">
 
-                    <TextView
-                        android:id="@+id/tvProfileAge"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Age: 68"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="14sp" />
+                        <ImageView
+                            android:id="@+id/ivProfilePic"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/ic_spatial_audio"
+                            app:tint="@color/on_primary" />
+                    </FrameLayout>
 
-                    <TextView
-                        android:id="@+id/tvProfileDescription"
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Condition: Mild High-Frequency Loss"
-                        android:textColor="@color/primary"
-                        android:textSize="14sp"
-                        android:textStyle="italic" />
+                        android:layout_marginStart="16dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvProfileName"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="Your Name"
+                            android:textColor="@color/on_surface"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvProfileAge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Age: —"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <ImageButton
+                        android:id="@+id/btnEditProfile"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Edit Name and Age"
+                        android:src="@drawable/ic_edit"
+                        app:tint="@color/primary" />
                 </LinearLayout>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- CALIBRATION TOOL CARD -->
+        <!-- SAVED PRESETS / HEARING MODES CARD -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="12dp"
+            app:cardCornerRadius="16dp"
             app:cardElevation="2dp"
             app:strokeWidth="0dp">
 
@@ -103,51 +113,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="Calibration Tool"
-                    android:textColor="@color/on_surface"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvCalibrationStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Status: Calibrated (Standard Mode)"
-                    android:textColor="@color/on_surface_variant"
-                    android:textSize="14sp" />
-
-                <Button
-                    android:id="@+id/btnRunCalibration"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Recalibrate Headset"
-                    style="?attr/materialButtonOutlinedStyle" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- AUDIOGRAM CARD -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:strokeWidth="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="Audiogram Threshold Configuration"
+                    android:text="Saved Hearing Modes"
                     android:textColor="@color/on_surface"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -156,296 +122,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Configure left and right ear hearing thresholds (dB offset)"
-                    android:textColor="@color/on_surface_variant"
-                    android:textSize="12sp" />
-
-                <!-- Inverted Audiogram Chart View -->
-                <com.example.hearingaidapp.AudiogramChartView
-                    android:id="@+id/audiogramChartView"
-                    android:layout_width="match_parent"
-                    android:layout_height="220dp"
-                    android:layout_marginTop="16dp"
-                    android:background="#FFFBFBFB" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="16dp"
-                    android:gravity="center">
-                    <View
-                        android:layout_width="16dp"
-                        android:layout_height="3dp"
-                        android:background="#2196F3"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text=" Left Ear (X)"
-                        android:textColor="#2196F3"
-                        android:textSize="12sp"
-                        android:textStyle="bold"/>
-                    <View
-                        android:layout_width="16dp"
-                        android:layout_height="3dp"
-                        android:layout_marginStart="24dp"
-                        android:background="#F44336"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text=" Right Ear (O)"
-                        android:textColor="#F44336"
-                        android:textSize="12sp"
-                        android:textStyle="bold"/>
-                </LinearLayout>
-
-                <!-- 6 Frequency Rows -->
-                <LinearLayout
-                    android:id="@+id/frequencySlidersContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginTop="16dp">
-
-                    <!-- Headers -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:paddingBottom="8dp">
-                        <TextView
-                            android:layout_width="60dp"
-                            android:layout_height="wrap_content"
-                            android:text="Freq"
-                            android:textStyle="bold"
-                            android:textColor="@color/on_surface"/>
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Left Ear"
-                            android:gravity="center"
-                            android:textStyle="bold"
-                            android:textColor="#2196F3"/>
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Right Ear"
-                            android:gravity="center"
-                            android:textStyle="bold"
-                            android:textColor="#F44336"/>
-                    </LinearLayout>
-
-                    <!-- Row 1: 250 Hz -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:paddingVertical="4dp"
-                        android:orientation="horizontal">
-                        <TextView
-                            android:layout_width="60dp"
-                            android:layout_height="wrap_content"
-                            android:text="250 Hz"
-                            android:textSize="12sp"/>
-                        <SeekBar
-                            android:id="@+id/sbLeft250"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:progress="20"/>
-                        <SeekBar
-                            android:id="@+id/sbRight250"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:progress="15"/>
-                    </LinearLayout>
-
-                    <!-- Row 2: 500 Hz -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:paddingVertical="4dp"
-                        android:orientation="horizontal">
-                        <TextView
-                            android:layout_width="60dp"
-                            android:layout_height="wrap_content"
-                            android:text="500 Hz"
-                            android:textSize="12sp"/>
-                        <SeekBar
-                            android:id="@+id/sbLeft500"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:progress="25"/>
-                        <SeekBar
-                            android:id="@+id/sbRight500"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:progress="20"/>
-                    </LinearLayout>
-
-                    <!-- Row 3: 1000 Hz -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:paddingVertical="4dp"
-                        android:orientation="horizontal">
-                        <TextView
-                            android:layout_width="60dp"
-                            android:layout_height="wrap_content"
-                            android:text="1 kHz"
-                            android:textSize="12sp"/>
-                        <SeekBar
-                            android:id="@+id/sbLeft1000"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:progress="30"/>
-                        <SeekBar
-                            android:id="@+id/sbRight1000"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:progress="25"/>
-                    </LinearLayout>
-
-                    <!-- Row 4: 2000 Hz -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:paddingVertical="4dp"
-                        android:orientation="horizontal">
-                        <TextView
-                            android:layout_width="60dp"
-                            android:layout_height="wrap_content"
-                            android:text="2 kHz"
-                            android:textSize="12sp"/>
-                        <SeekBar
-                            android:id="@+id/sbLeft2000"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:progress="45"/>
-                        <SeekBar
-                            android:id="@+id/sbRight2000"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:progress="35"/>
-                    </LinearLayout>
-
-                    <!-- Row 5: 4000 Hz -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:paddingVertical="4dp"
-                        android:orientation="horizontal">
-                        <TextView
-                            android:layout_width="60dp"
-                            android:layout_height="wrap_content"
-                            android:text="4 kHz"
-                            android:textSize="12sp"/>
-                        <SeekBar
-                            android:id="@+id/sbLeft4000"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:progress="50"/>
-                        <SeekBar
-                            android:id="@+id/sbRight4000"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:progress="45"/>
-                    </LinearLayout>
-
-                    <!-- Row 6: 8000 Hz -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:paddingVertical="4dp"
-                        android:orientation="horizontal">
-                        <TextView
-                            android:layout_width="60dp"
-                            android:layout_height="wrap_content"
-                            android:text="8 kHz"
-                            android:textSize="12sp"/>
-                        <SeekBar
-                            android:id="@+id/sbLeft8000"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:progress="60"/>
-                        <SeekBar
-                            android:id="@+id/sbRight8000"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:max="100"
-                            android:progress="55"/>
-                    </LinearLayout>
-                </LinearLayout>
-
-                <Button
-                    android:id="@+id/btnSuggestEQ"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="Suggest EQ from Audiogram"
-                    style="?attr/materialButtonOutlinedStyle" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- SAVED PRESETS / MODES CARD -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            app:strokeWidth="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="Saved Presets / Hearing Modes"
-                    android:textColor="@color/on_surface"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Select a preset to load it instantly on the Home screen"
+                    android:text="Tap Load to apply a saved mode to your hearing aid"
                     android:textColor="@color/on_surface_variant"
                     android:textSize="12sp" />
 
@@ -454,8 +131,8 @@
                     android:id="@+id/presetsListContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginTop="16dp" />
+                    android:layout_marginTop="16dp"
+                    android:orientation="vertical" />
 
                 <TextView
                     android:id="@+id/tvNoSavedPresets"
