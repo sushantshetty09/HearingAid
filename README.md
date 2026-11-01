@@ -16,7 +16,7 @@
 
 **Hearing Aid Pro** is a native Android application that captures live audio from the device microphone, processes it in real time through a configurable digital signal processing (DSP) pipeline, and plays the enhanced audio back through headphones with minimal delay. It's designed as an accessible, low-cost alternative/companion to hardware hearing aids — giving users fine-grained control over amplification, frequency shaping, and background noise suppression.
 
-This isn't a toy amplifier — it implements genuine audio engineering concepts: **biquad parametric EQ filters, spectral-subtraction noise cancellation with Wiener filtering, dynamic range compression, a noise gate, and a real Cooley-Tukey FFT** for live spectrum visualization.
+This isn't a toy amplifier — it implements genuine audio engineering concepts: **biquad parametric EQ filters, STFT Wiener-filter noise cancellation with decision-directed SNR estimation, dynamic range compression, a noise gate, and a real Cooley-Tukey FFT** for live spectrum visualization.
 
 ### Why this matters
 Millions of people with mild-to-moderate hearing loss don't own a hearing aid due to cost or accessibility barriers. This project explores how far commodity Android hardware + smart software can go in closing that gap.
@@ -28,8 +28,8 @@ Millions of people with mild-to-moderate hearing loss don't own a hearing aid du
 | Category | Details |
 |---|---|
 | 🔊 **Real-Time Amplification** | Ultra-low-latency capture → process → playback pipeline (down to ~128-sample frames, using `VOICE_COMMUNICATION` input + `PERFORMANCE_MODE_LOW_LATENCY` output) |
-| 🎛️ **Dynamic Parametric EQ** | Add/remove unlimited EQ bands on the fly. Supports **Peaking, Low-Pass, High-Pass, Band-Pass, Notch, Low-Shelf, and High-Shelf** filters, each with adjustable frequency, gain, and Q factor |
-| 🎧 **Adaptive Noise Cancellation** | Spectral subtraction with Wiener-filter gain smoothing; learns an ambient noise profile automatically and can be reset on demand |
+| 🎛️ **Dynamic Parametric EQ** | Add/remove unlimited EQ bands on the fly. Supports **Peaking, Low-Pass, High-Pass, Band-Pass, Notch, Low-Shelf, and High-Shelf** filters with logarithmic Q factor controls, octave bandwidth hints, and live response curves |
+| 🎧 **Adaptive Noise Cancellation** | Decision-directed Wiener-filter gain smoothing; automatically learns ambient background noise and suppresses continuous background hum |
 | 🚫 **Noise Gate** | Suppresses low-level background hiss below a configurable amplitude threshold |
 | 📉 **Dynamic Range Compression** | Softens loud transients so amplified sound stays comfortable, not painful |
 | 📊 **Live Visualization** | Custom-drawn **waveform (time domain)** and **64-band FFT spectrum analyzer (frequency domain)** views, rendered from a real recursive FFT implementation |

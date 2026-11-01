@@ -36,4 +36,12 @@
     <string name="preset_restaurant_desc">Directional focus with background noise reduction</string>
     <string name="preset_outdoor">Outdoor</string>
     <string name="preset_outdoor_desc">Wind noise suppression for open spaces</string>
+
+    <!-- Q Factor Explainer -->
+    <string name="q_factor_title">What is Q Factor?</string>
+    <string name="q_factor_description">Q (Quality Factor) controls how wide or narrow the filter shape is.\n\n• Low Q (0.3 – 1.0): Wide bandwidth. Adjusts a broad range of frequencies smoothly (e.g. general tone adjustments).\n• Medium Q (1.0 – 2.0): Medium bandwidth (~1 to 1.4 octaves). Great for targeting speech clarity.\n• High Q (2.0 – 10.0): Narrow bandwidth. Precisely boosts or cuts a specific sharp frequency (e.g. suppressing feedback or tinnitus frequencies).</string>
+
+    <!-- Noise Cancellation Explainer -->
+    <string name="nc_explainer_title">Noise Cancellation</string>
+    <string name="nc_explainer_description">Learns background noise for a few seconds, then turns down the frequencies where only noise is present.\n\n• Decision-Directed Wiener Filter: Separates continuous background noise (like fans, AC, or road hum) from human speech.\n• Automatic Learning: Automatically learns when ambient sound is quiet, or reset manually when changing environments.</string>
 </resources>

@@ -68,6 +68,13 @@
     <color name="visualizer_waveform">#FFA3F69C</color>
     <color name="visualizer_waveform_shadow">#FF88D982</color>
 
+    <!-- Spectrum zone colors -->
+    <color name="spectrum_low">#7C4DFF</color>
+    <color name="spectrum_mid">#00BFA5</color>
+    <color name="spectrum_high">#FFAB00</color>
+    <color name="spectrum_mid_highlight">#2000BFA5</color>
+    <color name="spectrum_peak">#CCFFFFFF</color>
+
     <!-- Legacy compat -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>

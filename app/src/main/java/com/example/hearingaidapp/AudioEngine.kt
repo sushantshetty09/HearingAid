@@ -10,6 +10,151 @@ import kotlin.math.*
 class AudioEngine(private val context: Context) {
     companion object {
         private const val TAG = "AudioEngine"
+
+        /**
+         * Convert slider progress (0 to 1000) to logarithmic Q factor (0.1 to 10.0).
+         * Log scale provides finer control for lower Q values (0.3 - 2.0).
+         */
+        fun sliderToQ(progress: Int): Float {
+            val minLog = ln(0.1f)
+            val maxLog = ln(10.0f)
+            val fraction = progress.coerceIn(0, 1000) / 1000.0f
+            val logValue = minLog + fraction * (maxLog - minLog)
+            return exp(logValue)
+        }
+
+        /**
+         * Convert Q factor (0.1 to 10.0) to logarithmic slider progress (0 to 1000).
+         */
+        fun qToSlider(q: Float): Int {
+            val clampedQ = q.coerceIn(0.1f, 10.0f)
+            val minLog = ln(0.1f)
+            val maxLog = ln(10.0f)
+            val fraction = (ln(clampedQ) - minLog) / (maxLog - minLog)
+            return (fraction * 1000).toInt().coerceIn(0, 1000)
+        }
+
+        /**
+         * Calculate bandwidth in octaves for a given Q factor:
+         * BW = 2 * asinh(1 / (2*Q)) / ln(2)
+         */
+        fun qToBandwidthOctaves(q: Float): Float {
+            val clampedQ = q.coerceAtLeast(0.01f)
+            val arg = 1.0f / (2.0f * clampedQ)
+            val asinhVal = ln(arg + sqrt(arg * arg + 1.0f))
+            return (2.0f * asinhVal / ln(2.0f)).toFloat()
+        }
+
+        /**
+         * Compute biquad filter magnitude response in dB across target frequencies.
+         * H(z) = (b0 + b1*z^-1 + b2*z^-2) / (1 + a1*z^-1 + a2*z^-2) evaluated at z = e^(j*w)
+         */
+        fun calculateMagnitudeResponse(
+            frequency: Float,
+            gain: Float,
+            q: Float,
+            filterType: FilterType,
+            sampleRate: Int = 48000,
+            testFrequencies: FloatArray,
+            outResponse: FloatArray? = null
+        ): FloatArray {
+            val omega0 = 2 * PI * frequency / sampleRate
+            val cosW0 = cos(omega0).toFloat()
+            val sinW0 = sin(omega0).toFloat()
+            val alpha = sinW0 / (2 * q.coerceAtLeast(0.1f))
+            val A = 10.0.pow(gain / 40.0).toFloat()
+
+            var b0 = 1f; var b1 = 0f; var b2 = 0f
+            var a0 = 1f; var a1 = 0f; var a2 = 0f
+
+            when (filterType) {
+                FilterType.PEAKING -> {
+                    b0 = 1 + alpha * A
+                    b1 = -2 * cosW0
+                    b2 = 1 - alpha * A
+                    a0 = 1 + alpha / A
+                    a1 = -2 * cosW0
+                    a2 = 1 - alpha / A
+                }
+                FilterType.LOW_PASS -> {
+                    b0 = (1 - cosW0) / 2
+                    b1 = 1 - cosW0
+                    b2 = (1 - cosW0) / 2
+                    a0 = 1 + alpha
+                    a1 = -2 * cosW0
+                    a2 = 1 - alpha
+                }
+                FilterType.HIGH_PASS -> {
+                    b0 = (1 + cosW0) / 2
+                    b1 = -(1 + cosW0)
+                    b2 = (1 + cosW0) / 2
+                    a0 = 1 + alpha
+                    a1 = -2 * cosW0
+                    a2 = 1 - alpha
+                }
+                FilterType.BAND_PASS -> {
+                    b0 = alpha
+                    b1 = 0f
+                    b2 = -alpha
+                    a0 = 1 + alpha
+                    a1 = -2 * cosW0
+                    a2 = 1 - alpha
+                }
+                FilterType.NOTCH -> {
+                    b0 = 1f
+                    b1 = -2 * cosW0
+                    b2 = 1f
+                    a0 = 1 + alpha
+                    a1 = -2 * cosW0
+                    a2 = 1 - alpha
+                }
+                FilterType.LOW_SHELF -> {
+                    val sqrtA = sqrt(A)
+                    b0 = A * ((A + 1) - (A - 1) * cosW0 + 2 * sqrtA * alpha)
+                    b1 = 2 * A * ((A - 1) - (A + 1) * cosW0)
+                    b2 = A * ((A + 1) - (A - 1) * cosW0 - 2 * sqrtA * alpha)
+                    a0 = (A + 1) + (A - 1) * cosW0 + 2 * sqrtA * alpha
+                    a1 = -2 * ((A - 1) + (A + 1) * cosW0)
+                    a2 = (A + 1) + (A - 1) * cosW0 - 2 * sqrtA * alpha
+                }
+                FilterType.HIGH_SHELF -> {
+                    val sqrtA = sqrt(A)
+                    b0 = A * ((A + 1) + (A - 1) * cosW0 + 2 * sqrtA * alpha)
+                    b1 = -2 * A * ((A - 1) + (A + 1) * cosW0)
+                    b2 = A * ((A + 1) + (A - 1) * cosW0 - 2 * sqrtA * alpha)
+                    a0 = (A + 1) - (A - 1) * cosW0 + 2 * sqrtA * alpha
+                    a1 = 2 * ((A - 1) - (A + 1) * cosW0)
+                    a2 = (A + 1) - (A - 1) * cosW0 - 2 * sqrtA * alpha
+                }
+            }
+
+            b0 /= a0; b1 /= a0; b2 /= a0
+            a1 /= a0; a2 /= a0
+
+            val response = outResponse ?: FloatArray(testFrequencies.size)
+            for (i in testFrequencies.indices) {
+                val f = testFrequencies[i]
+                val w = 2.0 * PI * f / sampleRate
+                val cosW = cos(w)
+                val sinW = sin(w)
+                val cos2W = cos(2 * w)
+                val sin2W = sin(2 * w)
+
+                val numRe = b0 + b1 * cosW + b2 * cos2W
+                val numIm = -b1 * sinW - b2 * sin2W
+
+                val denRe = 1.0 + a1 * cosW + a2 * cos2W
+                val denIm = -a1 * sinW - a2 * sin2W
+
+                val numMagSq = numRe * numRe + numIm * numIm
+                val denMagSq = denRe * denRe + denIm * denIm
+
+                val magSq = if (denMagSq > 1e-12) numMagSq / denMagSq else 1.0
+                val magDb = (10.0 * log10(magSq)).toFloat()
+                response[i] = magDb.coerceIn(-30f, 30f)
+            }
+            return response
+        }
     }
 
     enum class FilterType {
@@ -139,10 +284,12 @@ class AudioEngine(private val context: Context) {
     private var waveformView: WaveformView? = null
     private var spectrumView: SpectrumView? = null
     private var visualUpdateCounter = 0
-    private val visualUpdateFrequency = 2 // Update visuals every 2 chunks (~5ms) for 60 FPS
+    private val visualUpdateFrequency = 12 // ~30 fps throttling (12 chunks * 128 / 48000 = 32 ms)
+    private val visDecimatedColumns = 64
+    private val visDecimatedBuffer = FloatArray(visDecimatedColumns * 2)
+    private val visAccumBuffer = ShortArray(2048)
+    private var visAccumLength = 0
     private val fftProcessor = FFTProcessor(512)  
-    private var fftUpdateCounter = 0
-    private val fftUpdateFrequency = 2  
 
     data class EQBand(
         var frequency: Float = 1000f,
@@ -204,6 +351,10 @@ class AudioEngine(private val context: Context) {
     }
 
     private fun initializeDefaultEQ() {
+        val defaultFrequencies = floatArrayOf(60f, 250f, 500f, 800f, 1000f, 1500f, 2000f, 3000f, 4000f, 8000f)
+        for (freq in defaultFrequencies) {
+            addEQBand(freq, 0f, 1.0f, FilterType.PEAKING)
+        }
         recalculateHeadroomCompensation()
     }
 
@@ -296,8 +447,33 @@ class AudioEngine(private val context: Context) {
     }
 
     private fun updateRealTimeVisualization(buffer: ShortArray, length: Int) {
-        if (length > 0) {
-            waveformView?.updateWaveform(buffer.copyOf(length))
+        if (visAccumLength > 0) {
+            val samplesPerCol = visAccumLength.toFloat() / visDecimatedColumns
+            val shortInv = 1.0f / Short.MAX_VALUE
+            for (col in 0 until visDecimatedColumns) {
+                val start = (col * samplesPerCol).toInt()
+                val end = kotlin.math.min(((col + 1) * samplesPerCol).toInt(), visAccumLength)
+                var minVal = 1.0f
+                var maxVal = -1.0f
+                if (start < end) {
+                    for (s in start until end) {
+                        val norm = visAccumBuffer[s] * shortInv
+                        if (norm < minVal) minVal = norm
+                        if (norm > maxVal) maxVal = norm
+                    }
+                } else if (start < visAccumLength) {
+                    val norm = visAccumBuffer[start] * shortInv
+                    minVal = norm
+                    maxVal = norm
+                } else {
+                    minVal = 0f
+                    maxVal = 0f
+                }
+                visDecimatedBuffer[col * 2] = minVal
+                visDecimatedBuffer[col * 2 + 1] = maxVal
+            }
+            waveformView?.updateWaveform(visDecimatedBuffer, visDecimatedColumns * 2)
+            visAccumLength = 0
         }
 
         if (fftProcessor.isReady()) {
@@ -320,11 +496,19 @@ class AudioEngine(private val context: Context) {
                 val bytesRead = audioRecord?.read(buffer, 0, processingChunkSize) ?: 0
 
                 if (bytesRead > 0) {
+                    if (visAccumLength + bytesRead <= visAccumBuffer.size) {
+                        System.arraycopy(buffer, 0, originalBuffer, 0, bytesRead)
+                        System.arraycopy(originalBuffer, 0, visAccumBuffer, visAccumLength, bytesRead)
+                        visAccumLength += bytesRead
+                    } else {
+                        System.arraycopy(buffer, 0, originalBuffer, 0, bytesRead)
+                    }
+                    fftProcessor.addSamples(originalBuffer, bytesRead)
+
                     visualUpdateCounter++
                     val shouldUpdateVis = visualUpdateCounter >= visualUpdateFrequency
                     if (shouldUpdateVis) {
-                        System.arraycopy(buffer, 0, originalBuffer, 0, bytesRead)
-                        fftProcessor.addSamples(originalBuffer)
+                        updateRealTimeVisualization(originalBuffer, bytesRead)
                         visualUpdateCounter = 0
                     }
 
@@ -387,9 +571,7 @@ class AudioEngine(private val context: Context) {
                         break
                     }
 
-                    if (shouldUpdateVis) {
-                        updateRealTimeVisualization(originalBuffer, bytesRead)
-                    }
+
                 }
 
             } catch (e: Exception) {
@@ -536,20 +718,24 @@ class AudioEngine(private val context: Context) {
         val frameEnergy = computeFrameEnergy()
 
         if (!noiseProfileLearned) {
-            for (i in 0 until stftBins) {
-                noiseProfile[i] += stftMag[i]
-            }
-            noiseProfileSamples++
-
-            if (noiseProfileSamples >= maxNoiseProfileSamples) {
+            // Voice Activity Detection (VAD) guard: skip learning loud speech frames
+            val isSpeechDetected = frameEnergy > (noiseGateThreshold * 8f).coerceAtLeast(0.08f)
+            if (!isSpeechDetected) {
                 for (i in 0 until stftBins) {
-                    noiseProfile[i] /= maxNoiseProfileSamples
+                    noiseProfile[i] += stftMag[i]
                 }
-                noiseProfileLearned = true
-                Log.d(TAG, "Noise profile learned via STFT")
+                noiseProfileSamples++
+
+                if (noiseProfileSamples >= maxNoiseProfileSamples) {
+                    for (i in 0 until stftBins) {
+                        noiseProfile[i] /= maxNoiseProfileSamples
+                    }
+                    noiseProfileLearned = true
+                    Log.d(TAG, "Noise profile learned via STFT")
+                }
             }
         } else {
-            if (frameEnergy < noiseGateThreshold * 5f) {
+            if (frameEnergy < (noiseGateThreshold * 5f).coerceAtLeast(0.04f)) {
                 for (i in 0 until stftBins) {
                     noiseProfile[i] = (1f - adaptRate) * noiseProfile[i] + adaptRate * stftMag[i]
                 }
@@ -719,13 +905,14 @@ class AudioEngine(private val context: Context) {
         val band = eqBands[bandIndex]
         val filter = filters[bandIndex]
 
-        // Clamp Q factor to <= 3.0 when gain > 6dB to prevent self-resonance whining
-        val effectiveQ = if (band.filterType == FilterType.PEAKING && band.gain > 6f) band.q.coerceAtMost(3.0f) else band.q
-
         val omega = 2 * PI * band.frequency / sampleRate
         val cosOmega = cos(omega).toFloat()
         val sinOmega = sin(omega).toFloat()
-        val alpha = sinOmega / (2 * effectiveQ)
+        // Q factor mapping per filter type (Robert Bristow-Johnson RBJ Audio EQ Cookbook):
+        // PEAKING, BAND_PASS, NOTCH: Q controls filter bandwidth BW = f0 / Q.
+        // LOW_PASS, HIGH_PASS: Q controls resonance / Butterworth Q factor (Q=0.707 is maximally flat).
+        // LOW_SHELF, HIGH_SHELF: Q controls shelf transition steepness / slope S (alpha = sin(w0)/(2*Q)).
+        val alpha = sinOmega / (2 * band.q.coerceAtLeast(0.1f))
         val A = 10.0.pow(band.gain / 40.0).toFloat()
 
         when (band.filterType) {
@@ -939,6 +1126,10 @@ class AudioEngine(private val context: Context) {
     fun isNoiseCancelingEnabled(): Boolean = noiseCancelingEnabled
 
     fun isNoiseProfileLearned(): Boolean = noiseProfileLearned
+
+    fun getNoiseLearningProgress(): Float {
+        return if (noiseProfileLearned) 1.0f else (noiseProfileSamples.toFloat() / maxNoiseProfileSamples).coerceIn(0f, 1f)
+    }
 
     fun resetNoiseCancelingProfile() {
         resetNoiseProfile()

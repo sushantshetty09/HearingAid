@@ -1,210 +1,511 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/surface"
-    android:orientation="vertical"
-    android:padding="24dp">
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:fontFamily="sans-serif-medium"
-        android:text="Add Filter"
-        android:textColor="@color/on_surface"
-        android:textSize="22sp" />
-
-    <com.google.android.material.textfield.TextInputLayout
-        style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:boxBackgroundColor="@color/surface_container_low"
-        app:boxCornerRadiusBottomEnd="8dp"
-        app:boxCornerRadiusBottomStart="8dp"
-        app:boxCornerRadiusTopEnd="8dp"
-        app:boxCornerRadiusTopStart="8dp"
-        app:suffixText="Hz">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etFrequency"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Frequency"
-            android:inputType="numberDecimal"
-            android:textColor="@color/on_surface" />
-    </com.google.android.material.textfield.TextInputLayout>
+    android:background="@color/surface">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:background="@drawable/bg_section_card"
         android:orientation="vertical"
-        android:padding="8dp">
+        android:padding="20dp">
 
+        <TextView
+            android:id="@+id/tvDialogTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:fontFamily="sans-serif-medium"
+            android:text="Add Filter"
+            android:textColor="@color/on_surface"
+            android:textSize="22sp" />
+
+        <!-- Live Response Curve Preview -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="#0A181C"
+            app:cardCornerRadius="8dp"
+            app:strokeColor="#3300E5FF"
+            app:strokeWidth="1dp">
+
+            <com.example.hearingaidapp.FilterPreviewView
+                android:id="@+id/filterPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Frequency Input -->
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            app:boxBackgroundColor="@color/surface_container_low"
+            app:boxCornerRadiusBottomEnd="8dp"
+            app:boxCornerRadiusBottomStart="8dp"
+            app:boxCornerRadiusTopEnd="8dp"
+            app:boxCornerRadiusTopStart="8dp"
+            app:suffixText="Hz">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etFrequency"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Frequency"
+                android:inputType="numberDecimal"
+                android:textColor="@color/on_surface" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Quick Pick Frequency Chips (Low / Mid / High) -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Filter Type"
+            android:layout_marginBottom="4dp"
+            android:text="Quick Pick Frequencies (Hz)"
             android:textColor="@color/on_surface_variant"
-            android:textSize="12sp"
-            android:layout_marginBottom="4dp"/>
+            android:textSize="12sp" />
 
-        <Spinner
-            android:id="@+id/spinnerFilterType"
+        <HorizontalScrollView
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:backgroundTint="@color/on_surface" />
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- Low Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="LOW:"
+                    android:textColor="@color/spectrum_low"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:layout_marginEnd="4dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip60"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select 60 Hertz"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="60"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip250"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select 250 Hertz"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="250"
+                    android:textSize="11sp" />
+
+                <!-- Mid Section (Speech Presence - Visually Highlighted) -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="4dp"
+                    android:text="MID (SPEECH):"
+                    android:textColor="@color/spectrum_mid"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip500"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select 500 Hertz"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="500"
+                    android:textColor="@color/spectrum_mid"
+                    app:chipBackgroundColor="#2000BFA5"
+                    app:chipStrokeColor="@color/spectrum_mid"
+                    app:chipStrokeWidth="1dp"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip800"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select 800 Hertz"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="800"
+                    android:textColor="@color/spectrum_mid"
+                    app:chipBackgroundColor="#2000BFA5"
+                    app:chipStrokeColor="@color/spectrum_mid"
+                    app:chipStrokeWidth="1dp"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip1500"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select 1.5 kiloHertz"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1.5k"
+                    android:textColor="@color/spectrum_mid"
+                    app:chipBackgroundColor="#2000BFA5"
+                    app:chipStrokeColor="@color/spectrum_mid"
+                    app:chipStrokeWidth="1dp"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip2000"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select 2 kiloHertz"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2k"
+                    android:textColor="@color/spectrum_mid"
+                    app:chipBackgroundColor="#2000BFA5"
+                    app:chipStrokeColor="@color/spectrum_mid"
+                    app:chipStrokeWidth="1dp"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip3000"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select 3 kiloHertz"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="3k"
+                    android:textColor="@color/spectrum_mid"
+                    app:chipBackgroundColor="#2000BFA5"
+                    app:chipStrokeColor="@color/spectrum_mid"
+                    app:chipStrokeWidth="1dp"
+                    android:textSize="11sp" />
+
+                <!-- High Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="4dp"
+                    android:text="HIGH:"
+                    android:textColor="@color/spectrum_high"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip4000"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select 4 kiloHertz"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="4k"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip8000"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select 8 kiloHertz"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="8k"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Filter Type Spinner -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_section_card"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="Filter Type"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="12sp" />
+
+            <Spinner
+                android:id="@+id/spinnerFilterType"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:backgroundTint="@color/on_surface" />
+        </LinearLayout>
+
+        <!-- Gain Slider Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:orientation="vertical">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:letterSpacing="0.1"
+                    android:text="GAIN"
+                    android:textAllCaps="true"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvGainLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:text="0 dB"
+                    android:textColor="@color/primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+
+            <SeekBar
+                android:id="@+id/seekBarGain"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="40"
+                android:progress="20" />
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:text="-20 dB"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:text="+20 dB"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="12sp" />
+            </RelativeLayout>
+        </LinearLayout>
+
+        <!-- Q Factor Slider Section (Logarithmic) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:orientation="vertical">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:letterSpacing="0.1"
+                        android:text="Q FACTOR"
+                        android:textAllCaps="true"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="14sp" />
+
+                    <ImageButton
+                        android:id="@+id/btnQInfo"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="4dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="What is Q factor"
+                        android:padding="4dp"
+                        android:src="@android:drawable/ic_dialog_info"
+                        app:tint="@color/primary" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvQLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:text="Q 1.0 (Medium)"
+                    android:textColor="@color/spectrum_mid"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+
+            <!-- Bandwidth hint label -->
+            <TextView
+                android:id="@+id/tvQHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Bandwidth ~1.4 octaves"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="12sp"
+                android:textStyle="italic" />
+
+            <!-- Q Preset Quick Chips -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="Preset Q:"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipQ05"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select Q 0.5 Wide bandwidth"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:text="0.5 Wide"
+                    android:textSize="10sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipQ10"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select Q 1.0 Medium bandwidth"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:text="1.0 Med"
+                    android:textSize="10sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipQ20"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select Q 2.0 Narrow bandwidth"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:text="2.0 Narrow"
+                    android:textSize="10sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipQ40"
+                    android:minHeight="48dp"
+                    app:chipMinTouchTargetSize="48dp"
+                    android:contentDescription="Select Q 4.0 Sharp bandwidth"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="4.0 Sharp"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/seekBarQ"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="1000"
+                android:progress="434" />
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:text="0.1 (Wide)"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:text="10.0 (Narrow)"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="12sp" />
+            </RelativeLayout>
+        </LinearLayout>
+
+        <!-- Action Bar Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnCancelFilter"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:minHeight="48dp"
+                android:text="Cancel"
+                android:textColor="@color/primary" />
+
+            <Button
+                android:id="@+id/btnApplyFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/primary"
+                android:minHeight="48dp"
+                android:text="Apply"
+                android:textColor="@color/on_primary" />
+        </LinearLayout>
+
     </LinearLayout>
-
-    <!-- Gain slider section -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:orientation="vertical">
-
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:text="GAIN"
-                android:textColor="@color/on_surface_variant"
-                android:textSize="14sp"
-                android:letterSpacing="0.1"
-                android:textAllCaps="true" />
-            <TextView
-                android:id="@+id/tvGainLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:text="0.0"
-                android:textColor="@color/primary"
-                android:textSize="22sp"
-                android:textStyle="bold" />
-        </RelativeLayout>
-
-        <SeekBar
-            android:id="@+id/seekBarGain"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="40"
-            android:progress="20" />
-
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:text="-20"
-                android:textColor="@color/on_surface_variant"
-                android:textSize="14sp" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:text="+20"
-                android:textColor="@color/on_surface_variant"
-                android:textSize="14sp" />
-        </RelativeLayout>
-    </LinearLayout>
-
-    <!-- Q Factor slider section -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:orientation="vertical">
-
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:text="Q FACTOR"
-                android:textColor="@color/on_surface_variant"
-                android:textSize="14sp"
-                android:letterSpacing="0.1"
-                android:textAllCaps="true" />
-            <TextView
-                android:id="@+id/tvQLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:text="1.0"
-                android:textColor="@color/primary"
-                android:textSize="22sp"
-                android:textStyle="bold" />
-        </RelativeLayout>
-
-        <SeekBar
-            android:id="@+id/seekBarQ"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="99"
-            android:progress="9" />
-
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:text="0.1"
-                android:textColor="@color/on_surface_variant"
-                android:textSize="14sp" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:text="10"
-                android:textColor="@color/on_surface_variant"
-                android:textSize="14sp" />
-        </RelativeLayout>
-    </LinearLayout>
-
-    <!-- Action bar (decorative as requested) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/surface_container_low"
-        android:gravity="end"
-        android:orientation="horizontal"
-        android:padding="8dp">
-
-        <Button
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="Cancel"
-            android:textColor="@color/primary" />
-
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:backgroundTint="@color/primary"
-            android:text="Apply"
-            android:textColor="@color/on_primary" />
-    </LinearLayout>
-
-</LinearLayout>
+</ScrollView>

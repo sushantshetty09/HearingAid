@@ -31,6 +31,8 @@
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etEditProfileName"
+            android:minHeight="48dp"
+            android:contentDescription="Full Name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Full Name"
@@ -52,6 +54,8 @@
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etEditProfileAge"
+            android:minHeight="48dp"
+            android:contentDescription="Age between 0 and 120"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Age (0-120)"

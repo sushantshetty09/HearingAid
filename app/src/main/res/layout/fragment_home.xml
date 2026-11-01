@@ -175,8 +175,66 @@
                     android:id="@+id/waveformView"
                     android:layout_width="match_parent"
                     android:layout_height="110dp"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="8dp"
                     android:background="@android:color/transparent" />
+
+                <!-- Waveform Manual Zoom Selector -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="4dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Visual Zoom"
+                        android:textColor="#B3FFFFFF"
+                        android:textSize="11sp" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/cgWaveformZoom"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipZoom1x"
+                            style="@style/Widget.MaterialComponents.Chip.Choice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minHeight="48dp"
+                            app:chipMinTouchTargetSize="48dp"
+                            android:contentDescription="Visual Zoom 1x"
+                            android:checked="true"
+                            android:text="1x"
+                            android:textSize="10sp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipZoom2x"
+                            style="@style/Widget.MaterialComponents.Chip.Choice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minHeight="48dp"
+                            app:chipMinTouchTargetSize="48dp"
+                            android:contentDescription="Visual Zoom 2x"
+                            android:text="2x"
+                            android:textSize="10sp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipZoom4x"
+                            style="@style/Widget.MaterialComponents.Chip.Choice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minHeight="48dp"
+                            app:chipMinTouchTargetSize="48dp"
+                            android:contentDescription="Visual Zoom 4x"
+                            android:text="4x"
+                            android:textSize="10sp" />
+                    </com.google.android.material.chip.ChipGroup>
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -575,13 +633,31 @@
                 android:paddingBottom="16dp"
                 android:visibility="gone">
 
-                <Switch
-                    android:id="@+id/switchNoiseCanceling"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="Noise Canceling"
-                    android:textColor="@color/on_surface" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <Switch
+                        android:id="@+id/switchNoiseCanceling"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Noise Canceling"
+                        android:textColor="@color/on_surface" />
+
+                    <ImageButton
+                        android:id="@+id/btnNcInfo"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Noise cancellation info"
+                        android:padding="8dp"
+                        android:src="@android:drawable/ic_dialog_info"
+                        app:tint="@color/primary" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tvNoiseStatus"
@@ -589,6 +665,18 @@
                     android:layout_height="wrap_content"
                     android:text="Status: Active"
                     android:textColor="@color/on_surface" />
+
+                <ProgressBar
+                    android:id="@+id/pbNoiseLearning"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="6dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp"
+                    android:max="100"
+                    android:progress="0"
+                    android:progressTint="@color/spectrum_mid"
+                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/tvNoiseStrength"

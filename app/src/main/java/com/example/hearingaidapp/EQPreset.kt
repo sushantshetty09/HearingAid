@@ -99,7 +99,7 @@ data class EQPreset(
         }
 
         /**
-         * Create default presets with safe gain headroom calibration
+         * Create default presets with safe gain headroom calibration including speech mid-frequencies
          */
         fun getDefaultPresets(): List<EQPreset> {
             return listOf(
@@ -108,7 +108,9 @@ data class EQPreset(
                     name = "Flat",
                     filters = listOf(
                         FilterBand(250f, 0f, 1.0f),
+                        FilterBand(500f, 0f, 1.0f),
                         FilterBand(1000f, 0f, 1.0f),
+                        FilterBand(2000f, 0f, 1.0f),
                         FilterBand(3000f, 0f, 1.0f),
                         FilterBand(8000f, 0f, 1.0f)
                     ),
@@ -116,13 +118,18 @@ data class EQPreset(
                     noiseGateThreshold = 0.0f,
                     compressionRatio = 0.0f
                 ),
-                // Speech clarity preset (calibrated for safe headroom)
+                // Speech clarity preset (calibrated for safe headroom & speech presence)
                 EQPreset(
                     name = "Speech Clarity",
                     filters = listOf(
                         FilterBand(250f, -2f, 1.0f),
+                        FilterBand(500f, -1f, 1.0f),
+                        FilterBand(800f, 2f, 1.2f),
                         FilterBand(1000f, 3f, 1.2f),
+                        FilterBand(1500f, 3f, 1.2f),
+                        FilterBand(2000f, 3f, 1.0f),
                         FilterBand(2500f, 4f, 1.2f),
+                        FilterBand(3000f, 3f, 1.0f),
                         FilterBand(4000f, 3f, 1.0f),
                         FilterBand(8000f, -2f, 1.0f)
                     ),
@@ -136,7 +143,9 @@ data class EQPreset(
                     filters = listOf(
                         FilterBand(60f, 4f, 1.0f),
                         FilterBand(250f, 3f, 1.0f),
+                        FilterBand(500f, 1f, 1.0f),
                         FilterBand(1000f, 0f, 1.0f),
+                        FilterBand(2000f, 0f, 1.0f),
                         FilterBand(4000f, 0f, 1.0f)
                     ),
                     masterVolume = 1.0f,
@@ -148,6 +157,7 @@ data class EQPreset(
                     name = "High Freq Loss",
                     filters = listOf(
                         FilterBand(250f, 0f, 1.0f),
+                        FilterBand(500f, 1f, 1.0f),
                         FilterBand(1000f, 2f, 1.0f),
                         FilterBand(2000f, 4f, 1.1f),
                         FilterBand(4000f, 6f, 1.2f),
@@ -163,7 +173,9 @@ data class EQPreset(
                     filters = listOf(
                         FilterBand(60f, 3f, 1.0f),
                         FilterBand(250f, 1f, 1.0f),
+                        FilterBand(500f, 0f, 1.0f),
                         FilterBand(1000f, -1f, 1.0f),
+                        FilterBand(2000f, 1f, 1.0f),
                         FilterBand(4000f, 2f, 1.0f),
                         FilterBand(12000f, 3f, 1.0f)
                     ),

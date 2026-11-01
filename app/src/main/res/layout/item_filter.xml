@@ -8,7 +8,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- Header row -->
+    <!-- Header row with Filter title, type & buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -27,29 +27,40 @@
                 android:layout_height="wrap_content"
                 android:text="Filter 1: 2500 Hz"
                 android:textColor="@color/on_surface"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tvFilterType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Peaking, +6dB, Q 1.5"
+                android:text="Peaking, +6 dB, Q 1.0 (Medium)"
                 android:textColor="@color/on_surface_variant"
                 android:textSize="12sp" />
         </LinearLayout>
 
+        <!-- Mini live filter response preview thumbnail -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="60dp"
+            android:layout_height="36dp"
+            android:layout_marginEnd="8dp"
+            app:cardBackgroundColor="#0A181C"
+            app:cardCornerRadius="4dp"
+            app:strokeColor="#3300E5FF"
+            app:strokeWidth="1dp">
+
+            <com.example.hearingaidapp.FilterPreviewView
+                android:id="@+id/filterPreviewItem"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </com.google.android.material.card.MaterialCardView>
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnEditFilter"
             style="@style/Widget.Material3.Button.IconButton"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginEnd="8dp"
-            android:insetLeft="0dp"
-            android:insetTop="0dp"
-            android:insetRight="0dp"
-            android:insetBottom="0dp"
-            android:padding="0dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="Edit Filter"
             app:icon="@drawable/ic_edit"
             app:iconGravity="textStart"
             app:iconPadding="0dp"
@@ -58,13 +69,9 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRemoveFilter"
             style="@style/Widget.Material3.Button.IconButton"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:insetLeft="0dp"
-            android:insetTop="0dp"
-            android:insetRight="0dp"
-            android:insetBottom="0dp"
-            android:padding="0dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="Remove Filter"
             app:icon="@drawable/ic_delete"
             app:iconGravity="textStart"
             app:iconPadding="0dp"
@@ -114,7 +121,7 @@
             android:progress="20" />
     </LinearLayout>
 
-    <!-- Q section -->
+    <!-- Q section (Logarithmic) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -142,9 +149,9 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:text="1.0"
-                android:textColor="@color/tertiary"
-                android:textSize="14sp"
+                android:text="Q 1.0 (Medium) ~1.4 oct"
+                android:textColor="@color/spectrum_mid"
+                android:textSize="13sp"
                 android:textStyle="bold" />
         </RelativeLayout>
 
@@ -153,8 +160,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:max="99"
-            android:progress="9" />
+            android:max="1000"
+            android:progress="434" />
     </LinearLayout>
 
 </LinearLayout>
