@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark Mode Colors -->
+    <color name="background">#FF121212</color>
+    <color name="on_background">#FFFFFFFF</color>
+    
+    <color name="surface">#FF1E1E1E</color>
+    <color name="on_surface">#FFFFFFFF</color>
+    <color name="surface_variant">#FF2A2E2B</color>
+    <color name="on_surface_variant">#FFB3B3B3</color>
+    
+    <color name="surface_container">#FF252525</color>
+    <color name="surface_container_low">#FF181818</color>
+    <color name="surface_container_high">#FF2D2D2D</color>
+    <color name="surface_container_lowest">#FF0F0F0F</color>
+    
+    <color name="primary">#FF88D982</color>
+    <color name="on_primary">#FF00390A</color>
+    <color name="primary_container">#FF005312</color>
+    <color name="on_primary_container">#FFCBFFC2</color>
+    
+    <color name="secondary">#FFB1CBD1</color>
+    <color name="on_secondary">#FF1B3438</color>
+    <color name="secondary_container">#FF334B4F</color>
+    <color name="on_secondary_container">#FFCDE7ED</color>
+    
+    <color name="tertiary">#FFBAC6EA</color>
+    <color name="on_tertiary">#FF24304D</color>
+    
+    <color name="outline">#FF8A9385</color>
+    <color name="outline_variant">#FF3D423C</color>
+    
+    <color name="visualizer_bg">#FF121212</color>
+    <color name="spectrum_low">#FFB388FF</color>
+    <color name="spectrum_mid">#FF64FFDA</color>
+    <color name="spectrum_high">#FFFFD54F</color>
+    <color name="spectrum_mid_highlight">#3000BFA5</color>
+    <color name="spectrum_peak">#FFFFFFFF</color>
+</resources>
+

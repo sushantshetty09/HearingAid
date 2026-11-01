@@ -13,37 +13,32 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- STATUS INDICATOR CARD -->
+        <!-- STATUS INDICATOR -->
         <LinearLayout
             android:id="@+id/statusIndicator"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="12dp"
             android:background="@drawable/bg_status_indicator"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="16dp">
+            android:padding="14dp"
+            android:visibility="gone">
 
-            <LinearLayout
+            <View
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:background="@drawable/pulse_dot" />
+
+            <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <View
-                    android:layout_width="12dp"
-                    android:layout_height="12dp"
-                    android:background="@drawable/pulse_dot" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="System Active: High Fidelity"
-                    android:textColor="@color/on_surface"
-                    android:textSize="14sp" />
-            </LinearLayout>
+                android:text="Hearing Aid Running"
+                android:textColor="@color/on_surface"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tvSessionTimer"
@@ -55,79 +50,94 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- EMERGENCY CONTROL CARD -->
-        <LinearLayout
-            android:id="@+id/btnToggleContainer"
+        <!-- START / STOP MAIN CONTROL CARD -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:background="@drawable/bg_section_card"
-            android:gravity="center_horizontal"
-            android:orientation="vertical"
-            android:padding="16dp">
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="0dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:fontFamily="sans-serif-medium"
-                android:text="Emergency Control"
-                android:textColor="@color/on_surface"
-                android:textSize="22sp" />
-
-            <FrameLayout
-                android:id="@+id/btnToggle"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="80dp"
-                android:background="@drawable/bg_start_button"
-                android:clickable="true"
-                android:focusable="true">
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:src="@drawable/ic_power"
-                        app:tint="#FFFFFF" />
+                <!-- Start/Stop Button -->
+                <FrameLayout
+                    android:id="@+id/btnToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:background="@drawable/bg_start_button"
+                    android:clickable="true"
+                    android:focusable="true">
 
                     <TextView
                         android:id="@+id/tvToggleText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="STOP/START HEARING AID"
-                        android:textColor="#FFFFFF"
-                        android:textSize="20sp"
+                        android:layout_gravity="center"
+                        android:text="START HEARING AID"
+                        android:textColor="@android:color/white"
+                        android:textSize="17sp"
                         android:textStyle="bold" />
+                </FrameLayout>
+
+                <!-- Master Volume Slider (Prominent) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Master Volume"
+                            android:textColor="@color/on_surface"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvVolumeLevel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="70%"
+                            android:textColor="@color/primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <SeekBar
+                        android:id="@+id/seekBarVolume"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:max="100"
+                        android:progress="70" />
                 </LinearLayout>
-            </FrameLayout>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="⚠️ Connect headphones to prevent loud feedback noise"
-                android:textColor="#E53935"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:gravity="center" />
-        </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        <!-- SEGREGATED CARD 1: WAVEFORM OSCILLOSCOPE -->
+        <!-- VISUAL 1: SOUND WAVE OSCILLOSCOPE -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="#121D1D"
+            app:cardBackgroundColor="@color/visualizer_bg"
             app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
-            app:strokeColor="#3300E676"
+            app:cardElevation="3dp"
+            app:strokeColor="#3300BFA5"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -142,58 +152,16 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
-                    <ImageView
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
-                        android:src="@drawable/ic_equalizer"
-                        app:tint="#00E676" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="Waveform Oscilloscope"
-                        android:textColor="#FFFFFF"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="#2600E676"
-                        android:paddingHorizontal="8dp"
-                        android:paddingVertical="4dp"
-                        android:text="TIME DOMAIN"
-                        android:textColor="#00E676"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <com.example.hearingaidapp.WaveformView
-                    android:id="@+id/waveformView"
-                    android:layout_width="match_parent"
-                    android:layout_height="110dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@android:color/transparent" />
-
-                <!-- Waveform Manual Zoom Selector -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="4dp">
-
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Visual Zoom"
-                        android:textColor="#B3FFFFFF"
-                        android:textSize="11sp" />
+                        android:text="Sound Wave (Volume &amp; Timing)"
+                        android:textColor="#CCFFFFFF"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
 
+                    <!-- Waveform Zoom -->
                     <com.google.android.material.chip.ChipGroup
                         android:id="@+id/cgWaveformZoom"
                         android:layout_width="wrap_content"
@@ -205,9 +173,6 @@
                             style="@style/Widget.MaterialComponents.Chip.Choice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:minHeight="48dp"
-                            app:chipMinTouchTargetSize="48dp"
-                            android:contentDescription="Visual Zoom 1x"
                             android:checked="true"
                             android:text="1x"
                             android:textSize="10sp" />
@@ -217,9 +182,6 @@
                             style="@style/Widget.MaterialComponents.Chip.Choice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:minHeight="48dp"
-                            app:chipMinTouchTargetSize="48dp"
-                            android:contentDescription="Visual Zoom 2x"
                             android:text="2x"
                             android:textSize="10sp" />
 
@@ -228,13 +190,51 @@
                             style="@style/Widget.MaterialComponents.Chip.Choice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:minHeight="48dp"
-                            app:chipMinTouchTargetSize="48dp"
-                            android:contentDescription="Visual Zoom 4x"
                             android:text="4x"
                             android:textSize="10sp" />
                     </com.google.android.material.chip.ChipGroup>
                 </LinearLayout>
+
+                <com.example.hearingaidapp.WaveformView
+                    android:id="@+id/waveformView"
+                    android:layout_width="match_parent"
+                    android:layout_height="90dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@android:color/transparent" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- VISUAL 2: FREQUENCY SPECTRUM -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/visualizer_bg"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="3dp"
+            app:strokeColor="#337C4DFF"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Frequency Spectrum (Bass • Speech • Treble)"
+                    android:textColor="#CCFFFFFF"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <com.example.hearingaidapp.SpectrumView
+                    android:id="@+id/spectrumView"
+                    android:layout_width="match_parent"
+                    android:layout_height="110dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@android:color/transparent" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -267,7 +267,7 @@
                         android:layout_height="wrap_content"
                         android:text="Meeting Recorder"
                         android:textColor="@color/on_surface"
-                        android:textSize="16sp"
+                        android:textSize="15sp"
                         android:textStyle="bold"
                         android:fontFamily="sans-serif-medium" />
 
@@ -276,10 +276,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Tap to record what you hear and replay later"
+                        android:text="Record what you hear to replay later"
                         android:textColor="@color/on_surface_variant"
                         android:textSize="12sp" />
-
                 </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
@@ -287,24 +286,22 @@
                     android:layout_width="wrap_content"
                     android:layout_height="48dp"
                     android:text="Record"
-                    android:minWidth="100dp"
+                    android:minWidth="96dp"
                     app:icon="@drawable/ic_mic"
                     app:cornerRadius="24dp"
                     style="?attr/materialButtonStyle" />
-
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- SEGREGATED CARD 2: SPECTRUM ANALYZER -->
+        <!-- INTUITIVE SPEECH & TONE EQUALIZER -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="#121D1D"
+            app:cardBackgroundColor="@color/surface"
             app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
-            app:strokeColor="#3300E5FF"
-            app:strokeWidth="1dp">
+            app:cardElevation="2dp"
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -321,484 +318,567 @@
                     <ImageView
                         android:layout_width="22dp"
                         android:layout_height="22dp"
-                        android:src="@drawable/ic_analytics"
-                        app:tint="#00E5FF" />
+                        android:src="@drawable/ic_equalizer"
+                        app:tint="@color/primary" />
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
+                        android:layout_marginStart="8dp"
                         android:layout_weight="1"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="Frequency Spectrum"
-                        android:textColor="#FFFFFF"
-                        android:textSize="18sp"
+                        android:text="Sound Tone &amp; Clarity"
+                        android:textColor="@color/on_surface"
+                        android:textSize="17sp"
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/tvCurrentPreset"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:background="#2600E5FF"
-                        android:paddingHorizontal="8dp"
-                        android:paddingVertical="4dp"
-                        android:text="48 BINS (60Hz - 16kHz)"
-                        android:textColor="#00E5FF"
-                        android:textSize="11sp"
+                        android:text="Speech Clarity"
+                        android:textColor="@color/primary"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <com.example.hearingaidapp.SpectrumView
-                    android:id="@+id/spectrumView"
+                <!-- Quick Hearing Presets Scroll -->
+                <HorizontalScrollView
                     android:layout_width="match_parent"
-                    android:layout_height="130dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:background="@android:color/transparent" />
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btnPresetSpeech"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:text="Speech Clarity"
+                            android:textSize="12sp"
+                            android:paddingHorizontal="12dp" />
+
+                        <Button
+                            android:id="@+id/btnPresetRestaurant"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="8dp"
+                            android:text="Restaurant"
+                            android:textSize="12sp"
+                            android:paddingHorizontal="12dp" />
+
+                        <Button
+                            android:id="@+id/btnPresetHome"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="8dp"
+                            android:text="Quiet Home"
+                            android:textSize="12sp"
+                            android:paddingHorizontal="12dp" />
+
+                        <Button
+                            android:id="@+id/btnPresetMusic"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="8dp"
+                            android:text="Music"
+                            android:textSize="12sp"
+                            android:paddingHorizontal="12dp" />
+
+                        <Button
+                            android:id="@+id/btnPresetFlat"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="8dp"
+                            android:text="Flat / Neutral"
+                            android:textSize="12sp"
+                            android:paddingHorizontal="12dp" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+
+                <!-- 3 PRIMARY TONE SLIDERS -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="16dp">
+
+                    <!-- Voice Clarity (Mid) - Highlighted in Teal -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_info_card"
+                        android:orientation="vertical"
+                        android:padding="12dp"
+                        android:layout_marginBottom="10dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Voice &amp; Speech Clarity (Mids)"
+                                android:textColor="@color/spectrum_mid"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvVoiceClarityVal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="+3 dB"
+                                android:textColor="@color/spectrum_mid"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Main slider for understanding words and conversations"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="11sp"
+                            android:layout_marginTop="2dp" />
+
+                        <SeekBar
+                            android:id="@+id/seekBarVoiceClarity"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:max="24"
+                            android:progress="15"
+                            android:progressTint="@color/spectrum_mid"
+                            android:thumbTint="@color/spectrum_mid" />
+                    </LinearLayout>
+
+                    <!-- Low / Bass Slider -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="4dp"
+                        android:layout_marginBottom="8dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Low Sounds (Bass &amp; Warmth)"
+                                android:textColor="@color/on_surface"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/tvBassVal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0 dB"
+                                android:textColor="@color/on_surface"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:id="@+id/seekBarBass"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:max="24"
+                            android:progress="12" />
+                    </LinearLayout>
+
+                    <!-- High / Treble Slider -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="4dp"
+                        android:layout_marginBottom="12dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="High Sounds (Treble &amp; Consonants)"
+                                android:textColor="@color/on_surface"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/tvTrebleVal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="+2 dB"
+                                android:textColor="@color/on_surface"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:id="@+id/seekBarTreble"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:max="24"
+                            android:progress="14" />
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- SAVE TO PROFILE & LOAD BUTTONS -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSaveToProfile"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="Save to My Profile"
+                        android:textSize="12sp"
+                        app:icon="@drawable/ic_spatial_audio"
+                        style="?attr/materialButtonStyle" />
+
+                    <Button
+                        android:id="@+id/btnLoadPreset"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="8dp"
+                        android:text="Presets"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <!-- COLLAPSIBLE EXPERT FILTER EDITOR -->
+                <LinearLayout
+                    android:id="@+id/btnToggleExpertEQ"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="12dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Fine-Tune Individual Bands (10 Bands)"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="12sp" />
+
+                    <ImageButton
+                        android:id="@+id/btnAddFilter"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Add custom filter"
+                        android:src="@drawable/ic_add_circle"
+                        app:tint="@color/primary" />
+
+                    <ImageView
+                        android:id="@+id/ivExpertToggleIcon"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="6dp"
+                        android:src="@drawable/ic_expand_more"
+                        app:tint="@color/on_surface_variant" />
+                </LinearLayout>
+
+                <!-- Dynamic Individual Filter Container (Collapsed by Default) -->
+                <LinearLayout
+                    android:id="@+id/filterContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tvNoFilters"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:padding="12dp"
+                    android:text="No custom filters configured."
+                    android:textColor="@color/on_surface_variant"
+                    android:visibility="gone" />
+
+                <!-- Hidden legacy button placeholder to maintain ViewBinding/ID compat -->
+                <Button
+                    android:id="@+id/btnSavePreset"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 2-COLUMN GRID -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:baselineAligned="false"
-            android:orientation="horizontal">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:layout_weight="1"
-                android:background="@drawable/bg_info_card"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_noise_control"
-                        app:tint="@color/primary" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="Noise Cancel"
-                        android:textColor="@color/on_surface"
-                        android:textSize="14sp" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/tvNoiseCancelingStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="Active"
-                    android:textColor="@color/primary"
-                    android:textSize="28sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="#1A000000"
-                    android:paddingHorizontal="6dp"
-                    android:paddingVertical="2dp"
-                    android:text="MAX"
-                    android:textColor="@color/primary"
-                    android:textSize="10sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:background="@drawable/bg_info_card"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_volume_up"
-                        app:tint="@color/secondary" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="Gain"
-                        android:textColor="@color/on_surface"
-                        android:textSize="14sp" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/tvGainValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="+12dB"
-                    android:textColor="@color/secondary"
-                    android:textSize="28sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="#1A000000"
-                    android:paddingHorizontal="6dp"
-                    android:paddingVertical="2dp"
-                    android:text="AUTO"
-                    android:textColor="@color/secondary"
-                    android:textSize="10sp" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- PARAMETRIC EQ SECTION -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:background="@drawable/bg_section_card"
-            android:orientation="vertical">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_equalizer"
-                    app:tint="@color/tertiary" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:text="Parametric EQ"
-                    android:textColor="@color/on_surface"
-                    android:textSize="22sp" />
-
-                <ImageButton
-                    android:id="@+id/btnAddFilter"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_add_circle"
-                    app:tint="@color/primary" />
-            </LinearLayout>
-
-            <!-- Preset Actions Bar -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingHorizontal="16dp"
-                android:paddingBottom="8dp">
-
-                <Button
-                    android:id="@+id/btnLoadPreset"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="4dp"
-                    android:text="Load"
-                    android:textSize="12sp" />
-
-                <Button
-                    android:id="@+id/btnSavePreset"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="4dp"
-                    android:text="Save"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tvCurrentPreset"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:paddingBottom="8dp"
-                android:text="Current: Custom"
-                android:textColor="@color/on_surface_variant"
-                android:textSize="14sp"
-                android:textStyle="italic" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/outline_variant" />
-
-            <LinearLayout
-                android:id="@+id/filterContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp" />
-
-            <TextView
-                android:id="@+id/tvNoFilters"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:gravity="center"
-                android:text="No Filters"
-                android:textColor="#888888" />
-        </LinearLayout>
-
-        <!-- HEARING PROFILE CHIPS -->
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <LinearLayout
-                    android:id="@+id/chipRestaurant"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_chip_active"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="8dp">
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_restaurant"
-                        app:tint="@color/on_primary" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="Restaurant"
-                        android:textColor="@color/on_primary" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/chipHome"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:background="@drawable/bg_chip_inactive"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="8dp">
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_home"
-                        app:tint="@color/on_surface" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="Home"
-                        android:textColor="@color/on_surface" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/chipOutdoor"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:background="@drawable/bg_chip_inactive"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="8dp">
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_nature_people"
-                        app:tint="@color/on_surface" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="Outdoor"
-                        android:textColor="@color/on_surface" />
-                </LinearLayout>
-            </LinearLayout>
-        </HorizontalScrollView>
-
-        <!-- ADVANCED FEATURES (hidden section or collapsed) -->
+        <!-- NOISE REDUCTION & SOUND COMFORT CARD (CLEAN & UNIFIED) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/advancedSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/surface_container"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp">
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="0dp">
 
             <LinearLayout
-                android:id="@+id/advancedHeader"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clickable="true"
-                android:focusable="true"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="Advanced Features"
-                    android:textColor="@color/on_surface"
-                    android:textSize="18sp" />
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_expand_more"
-                    app:tint="@color/on_surface_variant" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/advancedContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingHorizontal="16dp"
-                android:paddingBottom="16dp"
-                android:visibility="gone">
+                android:padding="16dp">
 
+                <!-- Header + Toggle -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="8dp">
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_noise_control"
+                        app:tint="@color/primary" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="Noise Reduction"
+                        android:textColor="@color/on_surface"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
 
                     <Switch
                         android:id="@+id/switchNoiseCanceling"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Noise Canceling"
-                        android:textColor="@color/on_surface" />
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
 
                     <ImageButton
                         android:id="@+id/btnNcInfo"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="Noise cancellation info"
+                        android:contentDescription="Noise cancellation guide"
                         android:padding="8dp"
                         android:src="@android:drawable/ic_dialog_info"
                         app:tint="@color/primary" />
                 </LinearLayout>
 
+                <!-- Noise Learning & Status Display -->
                 <TextView
                     android:id="@+id/tvNoiseStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Status: Active"
-                    android:textColor="@color/on_surface" />
+                    android:layout_marginTop="8dp"
+                    android:text="Status: Off"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="13sp" />
 
                 <ProgressBar
                     android:id="@+id/pbNoiseLearning"
                     style="?android:attr/progressBarStyleHorizontal"
                     android:layout_width="match_parent"
                     android:layout_height="6dp"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="6dp"
                     android:layout_marginBottom="8dp"
                     android:max="100"
                     android:progress="0"
                     android:progressTint="@color/spectrum_mid"
                     android:visibility="gone" />
 
-                <TextView
-                    android:id="@+id/tvNoiseStrength"
+                <!-- Noise Strength Slider -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Noise Strength: 50%"
-                    android:textColor="@color/on_surface" />
+                    android:orientation="vertical"
+                    android:layout_marginTop="8dp">
 
-                <SeekBar
-                    android:id="@+id/seekBarNoiseStrength"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:max="100" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
 
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Reduction Strength"
+                            android:textColor="@color/on_surface"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/tvNoiseStrength"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="50%"
+                            android:textColor="@color/primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <SeekBar
+                        android:id="@+id/seekBarNoiseStrength"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:max="100"
+                        android:progress="50" />
+                </LinearLayout>
+
+                <!-- Reset Noise Profile Button -->
                 <Button
                     android:id="@+id/btnResetNoiseProfile"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="4dp"
+                    android:text="Learn Current Room Noise (Reset)"
+                    android:textSize="12sp" />
+
+                <!-- Collapsible Comfort Tools (Gate & Compression) -->
+                <LinearLayout
+                    android:id="@+id/advancedHeader"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="12dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Ear Comfort Tools (Gate &amp; Limiter)"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="12sp" />
+
+                    <ImageView
+                        android:id="@+id/ivComfortToggleIcon"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_expand_more"
+                        app:tint="@color/on_surface_variant" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/advancedContent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:text="Reset Noise Profile" />
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="8dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Silence Gate (Mutes dead silence)"
+                                android:textColor="@color/on_surface"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/tvNoiseGate"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="10%"
+                                android:textColor="@color/on_surface"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:id="@+id/seekBarNoiseGate"
+                            android:layout_width="match_parent"
+                            android:layout_height="44dp"
+                            android:max="100" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="4dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Sudden Clatter Limiter (Compressor)"
+                                android:textColor="@color/on_surface"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/tvCompression"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="15%"
+                                android:textColor="@color/on_surface"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:id="@+id/seekBarCompression"
+                            android:layout_width="match_parent"
+                            android:layout_height="44dp"
+                            android:max="100" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Hidden legacy TextViews to maintain ViewBinding compat if needed -->
+                <TextView
+                    android:id="@+id/tvNoiseCancelingStatus"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone" />
 
                 <TextView
-                    android:id="@+id/tvNoiseGate"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Noise Gate"
-                    android:textColor="@color/on_surface" />
-
-                <SeekBar
-                    android:id="@+id/seekBarNoiseGate"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:max="100" />
-
-                <TextView
-                    android:id="@+id/tvCompression"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Compression"
-                    android:textColor="@color/on_surface" />
-
-                <SeekBar
-                    android:id="@+id/seekBarCompression"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:max="100" />
-
-                <TextView
-                    android:id="@+id/tvVolumeLevel"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Master Volume"
-                    android:textColor="@color/on_surface" />
-
-                <SeekBar
-                    android:id="@+id/seekBarVolume"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:max="100" />
-
+                    android:id="@+id/tvGainValue"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone" />
+00E5FF09
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

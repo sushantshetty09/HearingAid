@@ -1,4 +1,4 @@
-package com.example.hearingaidapp
+﻿package com.example.hearingaidapp
 
 import android.content.Context
 import android.media.*
@@ -1102,6 +1102,12 @@ class AudioEngine(private val context: Context) {
     fun setAmplification(gain: Float) {
         targetAmplificationGain = max(0.5f, min(gain, 4.0f))
     }
+
+    fun getAmplification(): Float = targetAmplificationGain
+
+    fun getNoiseGateThreshold(): Float = noiseGateThreshold
+
+    fun getCompressionRatio(): Float = compressionRatio
 
     fun setNoiseGate(threshold: Float) {
         noiseGateThreshold = max(0.001f, min(threshold, 0.2f))

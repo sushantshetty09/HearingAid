@@ -20,6 +20,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import java.io.File
 import java.io.FileOutputStream
@@ -31,6 +32,13 @@ class ProfilesFragment : Fragment() {
     private lateinit var tvProfileName: TextView
     private lateinit var tvProfileAge: TextView
     private lateinit var btnEditProfile: ImageButton
+
+    // Personal Profile Card views
+    private lateinit var cardPersonalProfile: View
+    private lateinit var tvPersonalProfileTitle: TextView
+    private lateinit var tvPersonalProfileDesc: TextView
+    private lateinit var btnApplyPersonalProfile: MaterialButton
+
     private lateinit var presetsListContainer: LinearLayout
     private lateinit var tvNoSavedPresets: TextView
 
@@ -68,6 +76,7 @@ class ProfilesFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        loadProfileData()
         loadPresetsList()
     }
 
@@ -77,6 +86,12 @@ class ProfilesFragment : Fragment() {
         tvProfileName = view.findViewById(R.id.tvProfileName)
         tvProfileAge = view.findViewById(R.id.tvProfileAge)
         btnEditProfile = view.findViewById(R.id.btnEditProfile)
+
+        cardPersonalProfile = view.findViewById(R.id.cardPersonalProfile)
+        tvPersonalProfileTitle = view.findViewById(R.id.tvPersonalProfileTitle)
+        tvPersonalProfileDesc = view.findViewById(R.id.tvPersonalProfileDesc)
+        btnApplyPersonalProfile = view.findViewById(R.id.btnApplyPersonalProfile)
+
         presetsListContainer = view.findViewById(R.id.presetsListContainer)
         tvNoSavedPresets = view.findViewById(R.id.tvNoSavedPresets)
     }
@@ -95,6 +110,25 @@ class ProfilesFragment : Fragment() {
                 ivProfilePic.setImageURI(Uri.fromFile(file))
                 ivProfilePic.clearColorFilter()
             }
+        }
+
+        // Check if user has saved a personal hearing profile
+        val hasSavedProfile = prefs.getBoolean("has_saved_hearing_profile", false)
+        val personalPresetName = prefs.getString("personal_profile_preset_name", "My Personal Profile") ?: "My Personal Profile"
+
+        if (hasSavedProfile) {
+            tvPersonalProfileTitle.text = "$name's Hearing Profile"
+            tvPersonalProfileDesc.text = "Custom-equalized filters and volume settings saved for your ears. Tap below to use immediately."
+            btnApplyPersonalProfile.isEnabled = true
+            btnApplyPersonalProfile.text = "Apply My Profile Sound"
+            btnApplyPersonalProfile.setOnClickListener {
+                mainActivity.loadPresetAndNavigateToHome(personalPresetName)
+            }
+        } else {
+            tvPersonalProfileTitle.text = "Personal Hearing Profile"
+            tvPersonalProfileDesc.text = "Adjust your sound on the Home screen and tap 'Save to My Profile' to store your optimal hearing setup here."
+            btnApplyPersonalProfile.isEnabled = false
+            btnApplyPersonalProfile.text = "No Profile Saved Yet"
         }
     }
 

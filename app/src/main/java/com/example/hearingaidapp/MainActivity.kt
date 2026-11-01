@@ -121,6 +121,19 @@ class MainActivity : AppCompatActivity() {
         presetManager = PresetManager(this)
         presetManager.initializeDefaultPresets()
 
+        // Restore user's personal hearing profile if saved
+        val profilePrefs = getSharedPreferences("profile_prefs", Context.MODE_PRIVATE)
+        if (profilePrefs.getBoolean("has_saved_hearing_profile", false)) {
+            val personalPresetName = profilePrefs.getString("personal_profile_preset_name", null)
+            if (personalPresetName != null) {
+                val personalPreset = presetManager.loadPreset(personalPresetName)
+                if (personalPreset != null) {
+                    audioEngine.applyPreset(personalPreset)
+                    presetManager.setCurrentPreset(personalPreset.name)
+                }
+            }
+        }
+
         setupNavigation()
         setupWindowInsets()
         checkNoiseProfileStatus()
