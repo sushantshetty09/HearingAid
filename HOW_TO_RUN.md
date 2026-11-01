@@ -60,3 +60,4 @@ The output APK will be placed at:
 - **Android Device / Emulator**: Android 5.0 (Lollipop, API 21) or higher.
 - **Headphones**: Wired or Bluetooth headphones (recommended to avoid acoustic feedback).
 - **Permissions**: Audio Recording (`RECORD_AUDIO`) and Bluetooth Audio (`BLUETOOTH_CONNECT` for Android 12+).
+
