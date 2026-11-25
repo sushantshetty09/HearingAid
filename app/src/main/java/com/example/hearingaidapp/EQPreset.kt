@@ -41,7 +41,7 @@ data class EQPreset(
             fun fromJSON(json: JSONObject): FilterBand {
                 return FilterBand(
                     frequency = json.getDouble("frequency").toFloat(),
-                    gain = json.getDouble("gain").toFloat(),
+                    gain = json.getDouble("gain").toFloat().coerceIn(AudioEngine.GAIN_MIN_DB, AudioEngine.GAIN_MAX_DB),
                     q = json.getDouble("q").toFloat(),
                     filterType = AudioEngine.FilterType.fromString(json.optString("filterType", "PEAKING")),
                     enabled = json.optBoolean("enabled", true)

@@ -713,6 +713,49 @@
                     android:progressTint="@color/spectrum_mid"
                     android:visibility="gone" />
 
+                <!-- Live Noise Spectrum Visualizer (visible when noise reduction is active) -->
+                <LinearLayout
+                    android:id="@+id/layoutNoiseSpectrum"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="4dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:text="Live Reduction Spectrum"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipShowReduction"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:checked="true"
+                            android:text="Show reduction"
+                            android:textSize="11sp" />
+                    </RelativeLayout>
+
+                    <com.example.hearingaidapp.NoiseSpectrumView
+                        android:id="@+id/noiseSpectrumView"
+                        android:layout_width="match_parent"
+                        android:layout_height="170dp" />
+                </LinearLayout>
+
                 <!-- Noise Strength Slider -->
                 <LinearLayout
                     android:layout_width="match_parent"

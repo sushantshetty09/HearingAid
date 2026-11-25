@@ -296,7 +296,7 @@
                 android:id="@+id/seekBarGain"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:max="40"
+                android:max="50"
                 android:progress="20" />
 
             <RelativeLayout
@@ -316,7 +316,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
-                    android:text="+20 dB"
+                    android:text="+30 dB"
                     android:textColor="@color/on_surface_variant"
                     android:textSize="12sp" />
             </RelativeLayout>

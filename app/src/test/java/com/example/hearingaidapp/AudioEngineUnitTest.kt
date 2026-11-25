@@ -236,4 +236,198 @@ class AudioEngineUnitTest {
         assertEquals(AudioEngine.FilterType.PEAKING, legacyPreset.filters[0].filterType)
         assertTrue(legacyPreset.filters[0].enabled)
     }
+
+    @Test
+    fun testPeakingFilterGainAt30dB() {
+        val centerFreq = 1000f
+        val gainDb = 30.0f
+        val q = 1.0f
+        val testFreqs = floatArrayOf(centerFreq)
+
+        val response = AudioEngine.calculateMagnitudeResponse(
+            frequency = centerFreq,
+            gain = gainDb,
+            q = q,
+            filterType = AudioEngine.FilterType.PEAKING,
+            sampleRate = 48000,
+            testFrequencies = testFreqs
+        )
+
+        assertEquals("Peaking filter gain at center frequency must equal configured +30 dB", gainDb, response[0], 0.2f)
+    }
+
+    @Test
+    fun testPeakingFilterGainAt30dBNarrowQStability() {
+        val centerFreq = 1000f
+        val gainDb = 30.0f
+        val testFreqs = floatArrayOf(centerFreq)
+
+        for (q in floatArrayOf(2.0f, 5.0f, 10.0f)) {
+            val response = AudioEngine.calculateMagnitudeResponse(
+                frequency = centerFreq,
+                gain = gainDb,
+                q = q,
+                filterType = AudioEngine.FilterType.PEAKING,
+                sampleRate = 48000,
+                testFrequencies = testFreqs
+            )
+            assertEquals("High Q ($q) peaking filter gain at center frequency must reach +30 dB without instability", gainDb, response[0], 0.3f)
+        }
+    }
+
+    @Test
+    fun testSetEQBandClampsToGainMinMax() {
+        val engine = AudioEngine(null)
+        val bandIndex = engine.addEQBand(1000f, 0f, 1.0f)
+
+        // Test clamping to GAIN_MAX_DB (+30 dB)
+        engine.setEQBand(bandIndex, 1000f, 45f, 1.0f)
+        var band = engine.getEQBand(bandIndex)
+        assertNotNull(band)
+        assertEquals(AudioEngine.GAIN_MAX_DB, band!!.gain, 0.001f)
+
+        // Test clamping to GAIN_MIN_DB (-20 dB)
+        engine.setEQBand(bandIndex, 1000f, -35f, 1.0f)
+        band = engine.getEQBand(bandIndex)
+        assertNotNull(band)
+        assertEquals(AudioEngine.GAIN_MIN_DB, band!!.gain, 0.001f)
+
+        // Test addEQBand clamping
+        val highBandIndex = engine.addEQBand(2000f, 50f, 1.0f)
+        val highBand = engine.getEQBand(highBandIndex)
+        assertNotNull(highBand)
+        assertEquals(AudioEngine.GAIN_MAX_DB, highBand!!.gain, 0.001f)
+
+        val lowBandIndex = engine.addEQBand(500f, -40f, 1.0f)
+        val lowBand = engine.getEQBand(lowBandIndex)
+        assertNotNull(lowBand)
+        assertEquals(AudioEngine.GAIN_MIN_DB, lowBand!!.gain, 0.001f)
+    }
+
+    @Test
+    fun testGainAndSliderConversions() {
+        // -20 dB -> slider 0
+        assertEquals(0, AudioEngine.gainToSlider(AudioEngine.GAIN_MIN_DB))
+        assertEquals(AudioEngine.GAIN_MIN_DB, AudioEngine.sliderToGain(0), 0.001f)
+
+        // 0 dB -> slider 20
+        assertEquals(20, AudioEngine.gainToSlider(0f))
+        assertEquals(0f, AudioEngine.sliderToGain(20), 0.001f)
+
+        // +30 dB -> slider 50
+        assertEquals(50, AudioEngine.gainToSlider(AudioEngine.GAIN_MAX_DB))
+        assertEquals(AudioEngine.GAIN_MAX_DB, AudioEngine.sliderToGain(50), 0.001f)
+
+        // Roundtrip across all integer gains from -20 to +30
+        for (g in -20..30) {
+            val slider = AudioEngine.gainToSlider(g.toFloat())
+            val restored = AudioEngine.sliderToGain(slider)
+            assertEquals("Roundtrip failed for gain $g", g.toFloat(), restored, 0.01f)
+        }
+    }
+
+    @Test
+    fun testNoiseSpectrumViewBinAndFrequencyMapping() {
+        val sampleRate = 48000
+        val stftSize = 512
+
+        // Bin 0 -> 0 Hz
+        assertEquals(0f, NoiseSpectrumView.binToFrequency(0, sampleRate, stftSize), 0.01f)
+
+        // Bin 1 -> 48000 / 512 = 93.75 Hz
+        assertEquals(93.75f, NoiseSpectrumView.binToFrequency(1, sampleRate, stftSize), 0.01f)
+
+        // Bin 256 (Nyquist) -> 24000 Hz
+        assertEquals(24000f, NoiseSpectrumView.binToFrequency(256, sampleRate, stftSize), 0.01f)
+
+        // Frequency to X fraction mapping (50 Hz to 16000 Hz)
+        assertEquals(0.0f, NoiseSpectrumView.frequencyToXFraction(50f), 0.001f)
+        assertEquals(1.0f, NoiseSpectrumView.frequencyToXFraction(16000f), 0.001f)
+
+        // Geometric midpoint: sqrt(50 * 16000) ~ 894.4 Hz -> fraction 0.5
+        val geomMid = sqrt(50f * 16000f)
+        assertEquals(0.5f, NoiseSpectrumView.frequencyToXFraction(geomMid), 0.01f)
+
+        // Frequency to pixel X mapping
+        val width = 500f
+        val paddingLeft = 50f
+        val paddingRight = 50f
+        val graphWidth = 400f
+
+        val x50 = NoiseSpectrumView.frequencyToX(50f, width, paddingLeft, paddingRight)
+        assertEquals(paddingLeft, x50, 0.01f)
+
+        val x16k = NoiseSpectrumView.frequencyToX(16000f, width, paddingLeft, paddingRight)
+        assertEquals(paddingLeft + graphWidth, x16k, 0.01f)
+
+        val xMid = NoiseSpectrumView.frequencyToX(geomMid, width, paddingLeft, paddingRight)
+        assertEquals(paddingLeft + graphWidth * 0.5f, xMid, 1.0f)
+
+        // dB to pixel Y mapping (0 dBFS at top, -90 dBFS at bottom)
+        val height = 200f
+        val paddingTop = 20f
+        val paddingBottom = 20f
+        val graphHeight = 160f
+
+        val y0 = NoiseSpectrumView.dbToY(0f, height, paddingTop, paddingBottom)
+        assertEquals(paddingTop, y0, 0.01f)
+
+        val yMinus90 = NoiseSpectrumView.dbToY(-90f, height, paddingTop, paddingBottom)
+        assertEquals(paddingTop + graphHeight, yMinus90, 0.01f)
+
+        val yMinus45 = NoiseSpectrumView.dbToY(-45f, height, paddingTop, paddingBottom)
+        assertEquals(paddingTop + graphHeight * 0.5f, yMinus45, 0.01f)
+    }
+
+    @Test
+    fun testOldPresetsWithPlusMinus20dBStillLoadAndNew30dBLoads() {
+        // Preset with -20 dB, 0 dB, +20 dB
+        val oldPresetJson = """
+            {
+                "name": "Old Saved Preset",
+                "masterVolume": 1.0,
+                "noiseGateThreshold": 0.0,
+                "compressionRatio": 0.0,
+                "filters": [
+                    {"frequency": 100.0, "gain": -20.0, "q": 1.0},
+                    {"frequency": 1000.0, "gain": 0.0, "q": 1.0},
+                    {"frequency": 8000.0, "gain": 20.0, "q": 1.0}
+                ]
+            }
+        """.trimIndent()
+
+        val oldPreset = EQPreset.fromJSON(oldPresetJson)
+        assertEquals("Old Saved Preset", oldPreset.name)
+        assertEquals(3, oldPreset.filters.size)
+        assertEquals(-20f, oldPreset.filters[0].gain, 0.001f)
+        assertEquals(0f, oldPreset.filters[1].gain, 0.001f)
+        assertEquals(20f, oldPreset.filters[2].gain, 0.001f)
+
+        // Applying old preset to AudioEngine preserves +/-20 dB
+        val engine = AudioEngine(null)
+        engine.applyPreset(oldPreset)
+        assertEquals(3, engine.getEQBandCount())
+        assertEquals(-20f, engine.getEQBand(0)!!.gain, 0.001f)
+        assertEquals(0f, engine.getEQBand(1)!!.gain, 0.001f)
+        assertEquals(20f, engine.getEQBand(2)!!.gain, 0.001f)
+
+        // Preset with new +30 dB gain loads and preserves +30 dB
+        val newPresetJson = """
+            {
+                "name": "High Gain Preset",
+                "masterVolume": 1.0,
+                "noiseGateThreshold": 0.0,
+                "compressionRatio": 0.0,
+                "filters": [
+                    {"frequency": 2000.0, "gain": 30.0, "q": 1.5}
+                ]
+            }
+        """.trimIndent()
+
+        val newPreset = EQPreset.fromJSON(newPresetJson)
+        assertEquals(30f, newPreset.filters[0].gain, 0.001f)
+        engine.applyPreset(newPreset)
+        assertEquals(1, engine.getEQBandCount())
+        assertEquals(30f, engine.getEQBand(0)!!.gain, 0.001f)
+    }
 }

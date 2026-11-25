@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.Choreographer
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -76,6 +77,77 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
     private lateinit var seekBarNoiseStrength: SeekBar
     private lateinit var tvNoiseStrength: TextView
     private lateinit var btnResetNoiseProfile: Button
+    private lateinit var layoutNoiseSpectrum: View
+    private lateinit var noiseSpectrumView: NoiseSpectrumView
+    private lateinit var chipShowReduction: Chip
+
+    // Noise Reduction Spectrum Snapshot Buffers & Choreographer Loop (~30 fps)
+    private val uiSnapBefore = FloatArray(AudioEngine.STFT_BINS)
+    private val uiSnapAfter = FloatArray(AudioEngine.STFT_BINS)
+    private val uiSnapNoise = FloatArray(AudioEngine.STFT_BINS)
+    private val uiSnapGain = FloatArray(AudioEngine.STFT_BINS)
+
+    private var isNoiseSpectrumRunning = false
+    private val noiseSpectrumCallback = object : Choreographer.FrameCallback {
+        private var lastFrameTimeNs = 0L
+
+        override fun doFrame(frameTimeNanos: Long) {
+            if (!isNoiseSpectrumRunning) return
+
+            // Throttle to ~30 fps (~33 ms)
+            if (frameTimeNanos - lastFrameTimeNs >= 30_000_000L) {
+                lastFrameTimeNs = frameTimeNanos
+                updateNoiseSpectrum()
+            }
+
+            if (isNoiseSpectrumRunning) {
+                Choreographer.getInstance().postFrameCallback(this)
+            }
+        }
+    }
+
+    private var hasShownHighGainWarning = false
+
+    private fun formatGainDb(gain: Float): String {
+        val rounded = kotlin.math.round(gain).toInt()
+        return if (rounded > 0) "+$rounded dB" else "$rounded dB"
+    }
+
+    private fun checkHighGainWarning(gainDb: Float) {
+        if (gainDb > 20f && !hasShownHighGainWarning) {
+            hasShownHighGainWarning = true
+            view?.let {
+                Snackbar.make(it, "High gain can cause feedback. Increase slowly.", Snackbar.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun startNoiseSpectrumLoop() {
+        if (isNoiseSpectrumRunning) return
+        if (!::switchNoiseCanceling.isInitialized || !switchNoiseCanceling.isChecked) return
+        isNoiseSpectrumRunning = true
+        Choreographer.getInstance().postFrameCallback(noiseSpectrumCallback)
+    }
+
+    private fun stopNoiseSpectrumLoop() {
+        isNoiseSpectrumRunning = false
+        Choreographer.getInstance().removeFrameCallback(noiseSpectrumCallback)
+    }
+
+    private fun updateNoiseSpectrum() {
+        if (!::noiseSpectrumView.isInitialized || !audioEngine.isNoiseCancelingEnabled()) return
+
+        val hasNew = audioEngine.copyNoiseSpectrum(uiSnapBefore, uiSnapAfter, uiSnapNoise, uiSnapGain)
+        val isLearned = audioEngine.isNoiseProfileLearned()
+        val progress = audioEngine.getNoiseLearningProgress()
+
+        if (hasNew) {
+            noiseSpectrumView.updateSpectrumData(
+                uiSnapBefore, uiSnapAfter, uiSnapNoise, uiSnapGain, isLearned, progress
+            )
+        }
+        updateNoiseCancelingStatusUI()
+    }
 
     // Comfort Tools (Gate & Limiter)
     private lateinit var advancedHeader: View
@@ -118,8 +190,21 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
         mainActivity.addAudioStateListener(this)
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (::switchNoiseCanceling.isInitialized && switchNoiseCanceling.isChecked) {
+            startNoiseSpectrumLoop()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopNoiseSpectrumLoop()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
+        stopNoiseSpectrumLoop()
         mainActivity.removeAudioStateListener(this)
         audioEngine.setVisualizerViews(null, null)
         recordingManager?.stopRecording()
@@ -199,6 +284,14 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
         seekBarNoiseStrength = view.findViewById(R.id.seekBarNoiseStrength)
         tvNoiseStrength = view.findViewById(R.id.tvNoiseStrength)
         btnResetNoiseProfile = view.findViewById(R.id.btnResetNoiseProfile)
+
+        layoutNoiseSpectrum = view.findViewById(R.id.layoutNoiseSpectrum)
+        noiseSpectrumView = view.findViewById(R.id.noiseSpectrumView)
+        chipShowReduction = view.findViewById(R.id.chipShowReduction)
+        chipShowReduction.setOnCheckedChangeListener { _, isChecked ->
+            noiseSpectrumView.setShowReduction(isChecked)
+        }
+        noiseSpectrumView.setSampleRate(audioEngine.getSampleRate())
 
         advancedHeader = view.findViewById(R.id.advancedHeader)
         ivComfortToggleIcon = view.findViewById(R.id.ivComfortToggleIcon)
@@ -329,6 +422,13 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
         switchNoiseCanceling.setOnCheckedChangeListener { _, isChecked ->
             audioEngine.setNoiseCanceling(isChecked)
             updateNoiseCancelingStatusUI()
+            if (isChecked) {
+                layoutNoiseSpectrum.visibility = View.VISIBLE
+                startNoiseSpectrumLoop()
+            } else {
+                layoutNoiseSpectrum.visibility = View.GONE
+                stopNoiseSpectrumLoop()
+            }
         }
 
         btnNcInfo.setOnClickListener { showNcInfoBottomSheet() }
@@ -347,6 +447,7 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
 
         btnResetNoiseProfile.setOnClickListener {
             audioEngine.resetNoiseCancelingProfile()
+            noiseSpectrumView.clearNoiseProfile()
             updateNoiseCancelingStatusUI()
             Snackbar.make(requireView(), "Noise profile reset. Learning room background...", Snackbar.LENGTH_SHORT).show()
         }
@@ -527,16 +628,25 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
             tvNoiseStatus.text = "Status: Off"
             tvNoiseStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.on_surface_variant))
             pbNoiseLearning.visibility = View.GONE
+            if (::layoutNoiseSpectrum.isInitialized) {
+                layoutNoiseSpectrum.visibility = View.GONE
+            }
+            stopNoiseSpectrumLoop()
         } else {
+            if (::layoutNoiseSpectrum.isInitialized) {
+                layoutNoiseSpectrum.visibility = View.VISIBLE
+            }
+            startNoiseSpectrumLoop()
             val isLearned = audioEngine.isNoiseProfileLearned()
             val progress = audioEngine.getNoiseLearningProgress()
             if (!isLearned && progress < 1.0f) {
-                tvNoiseStatus.text = "Status: Learning background noise (${(progress * 100).toInt()}%)..."
+                val pct = (progress * 100).toInt()
+                tvNoiseStatus.text = "Learning your environment... $pct% (Please stay quiet for ~2 seconds)"
                 tvNoiseStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.spectrum_high))
                 pbNoiseLearning.visibility = View.VISIBLE
-                pbNoiseLearning.progress = (progress * 100).toInt()
+                pbNoiseLearning.progress = pct
             } else {
-                tvNoiseStatus.text = "Status: Active (Speech Protected)"
+                tvNoiseStatus.text = "Noise profile learned"
                 tvNoiseStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.spectrum_mid))
                 pbNoiseLearning.visibility = View.GONE
             }
@@ -572,13 +682,13 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
         val btnRemove = filterView.findViewById<Button>(R.id.btnRemoveFilter)
 
         tvFilterTitle.text = "Filter ${bandIndex + 1}: ${band.frequency.toInt()} Hz"
-        tvFilterType.text = "${band.filterType.getDisplayName()}, ${if (band.gain >= 0) "+${band.gain.toInt()}" else "${band.gain.toInt()}"} dB"
+        tvFilterType.text = "${band.filterType.getDisplayName()}, ${formatGainDb(band.gain)}"
 
         filterPreviewItem.setFilter(band.frequency, band.gain, band.q, band.filterType)
 
-        val gainProgress = (band.gain + 20).toInt().coerceIn(0, 40)
+        val gainProgress = AudioEngine.gainToSlider(band.gain)
         seekBarGain.progress = gainProgress
-        tvFilterGain.text = "${(gainProgress - 20)} dB"
+        tvFilterGain.text = formatGainDb(band.gain)
 
         seekBarQ.progress = AudioEngine.qToSlider(band.q)
         val bwOct = AudioEngine.qToBandwidthOctaves(band.q)
@@ -587,11 +697,13 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
         seekBarGain.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
-                    val gainDb = progress - 20
-                    tvFilterGain.text = "$gainDb dB"
+                    val gainDb = AudioEngine.sliderToGain(progress)
+                    tvFilterGain.text = formatGainDb(gainDb)
+                    tvFilterType.text = "${band.filterType.getDisplayName()}, ${formatGainDb(gainDb)}"
+                    checkHighGainWarning(gainDb)
                     val currentQ = AudioEngine.sliderToQ(seekBarQ.progress)
-                    audioEngine.setEQBand(bandIndex, band.frequency, gainDb.toFloat(), currentQ, band.filterType)
-                    filterPreviewItem.setFilter(band.frequency, gainDb.toFloat(), currentQ, band.filterType)
+                    audioEngine.setEQBand(bandIndex, band.frequency, gainDb, currentQ, band.filterType)
+                    filterPreviewItem.setFilter(band.frequency, gainDb, currentQ, band.filterType)
                     markAsCustomPreset()
                 }
             }
@@ -605,7 +717,7 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
                     val q = AudioEngine.sliderToQ(progress)
                     val bw = AudioEngine.qToBandwidthOctaves(q)
                     tvFilterQ.text = "Q %.1f ~%.1f oct".format(q, bw)
-                    val currentGain = (seekBarGain.progress - 20).toFloat()
+                    val currentGain = AudioEngine.sliderToGain(seekBarGain.progress)
                     audioEngine.setEQBand(bandIndex, band.frequency, currentGain, q, band.filterType)
                     filterPreviewItem.setFilter(band.frequency, currentGain, q, band.filterType)
                     markAsCustomPreset()
@@ -714,15 +826,15 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
         spinnerFilterType?.setSelection(initialType.ordinal)
 
         etFrequency?.setText(initialFrequency.toInt().toString())
-        val gainProg = (initialGain + 20).toInt().coerceIn(0, 40)
+        val gainProg = AudioEngine.gainToSlider(initialGain)
         seekBarGain?.progress = gainProg
-        tvGainLabel?.text = "${initialGain.toInt()} dB"
+        tvGainLabel?.text = formatGainDb(initialGain)
 
         seekBarQ?.progress = AudioEngine.qToSlider(initialQ)
 
         fun updatePreview() {
             val freq = etFrequency?.text.toString().toFloatOrNull() ?: initialFrequency
-            val gain = ((seekBarGain?.progress ?: 20) - 20).toFloat()
+            val gain = AudioEngine.sliderToGain(seekBarGain?.progress ?: AudioEngine.gainToSlider(0f))
             val q = AudioEngine.sliderToQ(seekBarQ?.progress ?: 434)
             val bw = AudioEngine.qToBandwidthOctaves(q)
             val type = AudioEngine.FilterType.values()[spinnerFilterType?.selectedItemPosition ?: 0]
@@ -775,7 +887,11 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
 
         seekBarGain?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                tvGainLabel?.text = "${progress - 20} dB"
+                val gainDb = AudioEngine.sliderToGain(progress)
+                tvGainLabel?.text = formatGainDb(gainDb)
+                if (fromUser) {
+                    checkHighGainWarning(gainDb)
+                }
                 updatePreview()
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
@@ -823,7 +939,7 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
                 return@setOnClickListener
             }
 
-            val gain = (controls.seekBarGain.progress - 20).toFloat()
+            val gain = AudioEngine.sliderToGain(controls.seekBarGain.progress)
             val q = AudioEngine.sliderToQ(controls.seekBarQ.progress)
             val filterType = AudioEngine.FilterType.values()[controls.spinnerFilterType.selectedItemPosition]
 
@@ -854,7 +970,7 @@ class HomeFragment : Fragment(), MainActivity.AudioStateListener {
                 return@setOnClickListener
             }
 
-            val gain = (controls.seekBarGain.progress - 20).toFloat()
+            val gain = AudioEngine.sliderToGain(controls.seekBarGain.progress)
             val q = AudioEngine.sliderToQ(controls.seekBarQ.progress)
             val filterType = AudioEngine.FilterType.values()[controls.spinnerFilterType.selectedItemPosition]
 

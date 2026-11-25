@@ -1,4 +1,4 @@
-﻿package com.example.hearingaidapp
+package com.example.hearingaidapp
 
 import android.content.Context
 import android.media.*
@@ -7,9 +7,32 @@ import android.util.Log
 import kotlin.math.*
 
 
-class AudioEngine(private val context: Context) {
+class AudioEngine(private val context: Context? = null) {
     companion object {
         private const val TAG = "AudioEngine"
+
+        const val GAIN_MIN_DB = -20f
+        const val GAIN_MAX_DB = 30f
+
+        const val STFT_SIZE = 512
+        const val STFT_HOP = 256
+        const val STFT_BINS = STFT_SIZE / 2 + 1 // 257
+
+        /**
+         * Convert gain in dB (-20 to +30 dB) to SeekBar slider progress (0 to 50).
+         * 0 dB is at progress 20.
+         */
+        fun gainToSlider(db: Float): Int {
+            return (db - GAIN_MIN_DB).roundToInt().coerceIn(0, (GAIN_MAX_DB - GAIN_MIN_DB).toInt())
+        }
+
+        /**
+         * Convert SeekBar slider progress (0 to 50) to gain in dB (-20 to +30 dB).
+         * Progress 20 yields 0 dB.
+         */
+        fun sliderToGain(progress: Int): Float {
+            return (progress.toFloat() + GAIN_MIN_DB).coerceIn(GAIN_MIN_DB, GAIN_MAX_DB)
+        }
 
         /**
          * Convert slider progress (0 to 1000) to logarithmic Q factor (0.1 to 10.0).
@@ -151,7 +174,7 @@ class AudioEngine(private val context: Context) {
 
                 val magSq = if (denMagSq > 1e-12) numMagSq / denMagSq else 1.0
                 val magDb = (10.0 * log10(magSq)).toFloat()
-                response[i] = magDb.coerceIn(-30f, 30f)
+                response[i] = magDb.coerceIn(-36f, 36f)
             }
             return response
         }
@@ -280,6 +303,17 @@ class AudioEngine(private val context: Context) {
     // Pre-allocated buffer for short↔float conversion
     private var ncFloatBuf = FloatArray(1024)
 
+    // UI snapshot buffers for NoiseSpectrumView (double-buffered, lock-free, zero allocations on audio thread)
+    private val snapBefore = Array(2) { FloatArray(stftBins) }
+    private val snapAfter = Array(2) { FloatArray(stftBins) }
+    private val snapNoise = Array(2) { FloatArray(stftBins) }
+    private val snapGain = Array(2) { FloatArray(stftBins) { 1f } }
+    private val rawMagBefore = FloatArray(stftBins)
+    @Volatile private var latestBank = 0
+    @Volatile private var hasNewSnapshot = false
+    private var snapshotPublishCounter = 0
+    private val snapshotPublishInterval = 6 // Publish every 6 frames (~32 ms / ~31 fps at 48kHz hop 256)
+
     // Visualization
     private var waveformView: WaveformView? = null
     private var spectrumView: SpectrumView? = null
@@ -318,7 +352,20 @@ class AudioEngine(private val context: Context) {
     }
 
     private fun optimizeForLowLatency() {
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val ctx = context
+        if (ctx == null) {
+            sampleRate = 48000
+            nativeFramesPerBuffer = 128
+            recordBufferSize = 4096
+            playBufferSize = 4096
+            processingChunkSize = 128
+            if (ncFloatBuf.size < processingChunkSize) {
+                ncFloatBuf = FloatArray(processingChunkSize)
+            }
+            return
+        }
+
+        val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
         val nativeSampleRate = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)
         sampleRate = nativeSampleRate?.toIntOrNull() ?: 48000  
@@ -686,6 +733,7 @@ class AudioEngine(private val context: Context) {
             val im = stftWorkImag[i]
             val mag = sqrt((re * re + im * im).toFloat())
             stftMag[i] = mag
+            rawMagBefore[i] = mag
             stftPhase[i] = atan2(im.toFloat(), re.toFloat())
 
             totalMag += mag
@@ -793,6 +841,23 @@ class AudioEngine(private val context: Context) {
         for (i in 0 until stftHop) {
             olaBuffer[i] = stftWorkReal[i + stftHop].toFloat()
         }
+
+        // Publish snapshot for NoiseSpectrumView UI every N frames (zero lock, double-buffered)
+        snapshotPublishCounter++
+        if (snapshotPublishCounter >= snapshotPublishInterval) {
+            snapshotPublishCounter = 0
+            val nextBank = 1 - latestBank
+            System.arraycopy(rawMagBefore, 0, snapBefore[nextBank], 0, stftBins)
+            System.arraycopy(stftMag, 0, snapAfter[nextBank], 0, stftBins)
+            if (noiseProfileLearned) {
+                System.arraycopy(noiseProfile, 0, snapNoise[nextBank], 0, stftBins)
+            } else {
+                snapNoise[nextBank].fill(0f)
+            }
+            System.arraycopy(wienerGains, 0, snapGain[nextBank], 0, stftBins)
+            latestBank = nextBank
+            hasNewSnapshot = true
+        }
     }
 
     /**
@@ -884,6 +949,14 @@ class AudioEngine(private val context: Context) {
         olaBuffer.fill(0f)
         stftOutRead = 0
         stftOutWrite = 0
+
+        for (b in 0..1) {
+            snapBefore[b].fill(0f)
+            snapAfter[b].fill(0f)
+            snapNoise[b].fill(0f)
+            snapGain[b].fill(1f)
+        }
+        hasNewSnapshot = true
     }
 
     private fun updateAllFilters() {
@@ -907,112 +980,108 @@ class AudioEngine(private val context: Context) {
         val band = eqBands[bandIndex]
         val filter = filters[bandIndex]
 
-        val omega = 2 * PI * band.frequency / sampleRate
-        val cosOmega = cos(omega).toFloat()
-        val sinOmega = sin(omega).toFloat()
+        val omega = 2.0 * Math.PI * band.frequency.toDouble() / sampleRate.toDouble()
+        val cosOmega = Math.cos(omega)
+        val sinOmega = Math.sin(omega)
         // Q factor mapping per filter type (Robert Bristow-Johnson RBJ Audio EQ Cookbook):
         // PEAKING, BAND_PASS, NOTCH: Q controls filter bandwidth BW = f0 / Q.
         // LOW_PASS, HIGH_PASS: Q controls resonance / Butterworth Q factor (Q=0.707 is maximally flat).
         // LOW_SHELF, HIGH_SHELF: Q controls shelf transition steepness / slope S (alpha = sin(w0)/(2*Q)).
-        val alpha = sinOmega / (2 * band.q.coerceAtLeast(0.1f))
-        val A = 10.0.pow(band.gain / 40.0).toFloat()
+        val alpha = sinOmega / (2.0 * band.q.coerceAtLeast(0.1f).toDouble())
+        val A = 10.0.pow(band.gain.toDouble() / 40.0)
+
+        var b0D = 1.0
+        var b1D = 0.0
+        var b2D = 0.0
+        var a0D = 1.0
+        var a1D = 0.0
+        var a2D = 0.0
 
         when (band.filterType) {
             FilterType.PEAKING -> {
-                filter.b0 = 1 + alpha * A
-                filter.b1 = -2 * cosOmega
-                filter.b2 = 1 - alpha * A
-                val a0 = 1 + alpha / A
-                filter.a1 = -2 * cosOmega / a0
-                filter.a2 = (1 - alpha / A) / a0
-                filter.b0 /= a0
-                filter.b1 /= a0
-                filter.b2 /= a0
+                b0D = 1.0 + alpha * A
+                b1D = -2.0 * cosOmega
+                b2D = 1.0 - alpha * A
+                a0D = 1.0 + alpha / A
+                a1D = -2.0 * cosOmega
+                a2D = 1.0 - alpha / A
             }
             FilterType.LOW_PASS -> {
-                filter.b0 = (1 - cosOmega) / 2
-                filter.b1 = 1 - cosOmega
-                filter.b2 = (1 - cosOmega) / 2
-                val a0 = 1 + alpha
-                filter.a1 = -2 * cosOmega / a0
-                filter.a2 = (1 - alpha) / a0
-                filter.b0 /= a0
-                filter.b1 /= a0
-                filter.b2 /= a0
+                b0D = (1.0 - cosOmega) / 2.0
+                b1D = 1.0 - cosOmega
+                b2D = (1.0 - cosOmega) / 2.0
+                a0D = 1.0 + alpha
+                a1D = -2.0 * cosOmega
+                a2D = 1.0 - alpha
             }
             FilterType.HIGH_PASS -> {
-                filter.b0 = (1 + cosOmega) / 2
-                filter.b1 = -(1 + cosOmega)
-                filter.b2 = (1 + cosOmega) / 2
-                val a0 = 1 + alpha
-                filter.a1 = -2 * cosOmega / a0
-                filter.a2 = (1 - alpha) / a0
-                filter.b0 /= a0
-                filter.b1 /= a0
-                filter.b2 /= a0
+                b0D = (1.0 + cosOmega) / 2.0
+                b1D = -(1.0 + cosOmega)
+                b2D = (1.0 + cosOmega) / 2.0
+                a0D = 1.0 + alpha
+                a1D = -2.0 * cosOmega
+                a2D = 1.0 - alpha
             }
             FilterType.BAND_PASS -> {
-                filter.b0 = alpha
-                filter.b1 = 0f
-                filter.b2 = -alpha
-                val a0 = 1 + alpha
-                filter.a1 = -2 * cosOmega / a0
-                filter.a2 = (1 - alpha) / a0
-                filter.b0 /= a0
-                filter.b1 /= a0
-                filter.b2 /= a0
+                b0D = alpha
+                b1D = 0.0
+                b2D = -alpha
+                a0D = 1.0 + alpha
+                a1D = -2.0 * cosOmega
+                a2D = 1.0 - alpha
             }
             FilterType.NOTCH -> {
-                filter.b0 = 1f
-                filter.b1 = -2 * cosOmega
-                filter.b2 = 1f
-                val a0 = 1 + alpha
-                filter.a1 = -2 * cosOmega / a0
-                filter.a2 = (1 - alpha) / a0
-                filter.b0 /= a0
-                filter.b1 /= a0
-                filter.b2 /= a0
+                b0D = 1.0
+                b1D = -2.0 * cosOmega
+                b2D = 1.0
+                a0D = 1.0 + alpha
+                a1D = -2.0 * cosOmega
+                a2D = 1.0 - alpha
             }
             FilterType.LOW_SHELF -> {
-                val sqrtA = sqrt(A)
-                filter.b0 = A * ((A + 1) - (A - 1) * cosOmega + 2 * sqrtA * alpha)
-                filter.b1 = 2 * A * ((A - 1) - (A + 1) * cosOmega)
-                filter.b2 = A * ((A + 1) - (A - 1) * cosOmega - 2 * sqrtA * alpha)
-                val a0 = (A + 1) + (A - 1) * cosOmega + 2 * sqrtA * alpha
-                filter.a1 = -2 * ((A - 1) + (A + 1) * cosOmega) / a0
-                filter.a2 = ((A + 1) + (A - 1) * cosOmega - 2 * sqrtA * alpha) / a0
-                filter.b0 /= a0
-                filter.b1 /= a0
-                filter.b2 /= a0
+                val sqrtA = Math.sqrt(A)
+                b0D = A * ((A + 1.0) - (A - 1.0) * cosOmega + 2.0 * sqrtA * alpha)
+                b1D = 2.0 * A * ((A - 1.0) - (A + 1.0) * cosOmega)
+                b2D = A * ((A + 1.0) - (A - 1.0) * cosOmega - 2.0 * sqrtA * alpha)
+                a0D = (A + 1.0) + (A - 1.0) * cosOmega + 2.0 * sqrtA * alpha
+                a1D = -2.0 * ((A - 1.0) + (A + 1.0) * cosOmega)
+                a2D = (A + 1.0) + (A - 1.0) * cosOmega - 2.0 * sqrtA * alpha
             }
             FilterType.HIGH_SHELF -> {
-                val sqrtA = sqrt(A)
-                filter.b0 = A * ((A + 1) + (A - 1) * cosOmega + 2 * sqrtA * alpha)
-                filter.b1 = -2 * A * ((A - 1) + (A + 1) * cosOmega)
-                filter.b2 = A * ((A + 1) + (A - 1) * cosOmega - 2 * sqrtA * alpha)
-                val a0 = (A + 1) - (A - 1) * cosOmega + 2 * sqrtA * alpha
-                filter.a1 = 2 * ((A - 1) - (A + 1) * cosOmega) / a0
-                filter.a2 = ((A + 1) - (A - 1) * cosOmega - 2 * sqrtA * alpha) / a0
-                filter.b0 /= a0
-                filter.b1 /= a0
-                filter.b2 /= a0
+                val sqrtA = Math.sqrt(A)
+                b0D = A * ((A + 1.0) + (A - 1.0) * cosOmega + 2.0 * sqrtA * alpha)
+                b1D = -2.0 * A * ((A - 1.0) + (A + 1.0) * cosOmega)
+                b2D = A * ((A + 1.0) + (A - 1.0) * cosOmega - 2.0 * sqrtA * alpha)
+                a0D = (A + 1.0) - (A - 1.0) * cosOmega + 2.0 * sqrtA * alpha
+                a1D = 2.0 * ((A - 1.0) - (A + 1.0) * cosOmega)
+                a2D = (A + 1.0) - (A - 1.0) * cosOmega - 2.0 * sqrtA * alpha
             }
         }
 
-        // Biquad Stability Guard: Poles must lie inside unit circle (|a2| < 1.0 and |a1| < 1.0 + a2)
-        filter.isStable = abs(filter.a2) < 0.999f && abs(filter.a1) < (1.0f + filter.a2)
+        val normA1 = (a1D / a0D).toFloat()
+        val normA2 = (a2D / a0D).toFloat()
+
+        // Biquad Stability Guard: Poles must lie strictly inside unit circle (|a2| < 1.0 and |a1| < 1.0 + a2)
+        // High-Q peaking filters at +30 dB and low frequencies have |a2| very close to 1.0 (e.g. 0.9998)
+        filter.isStable = abs(normA2) < 0.99999f && abs(normA1) < (1.0f + normA2)
         if (!filter.isStable) {
             Log.w(TAG, "Unstable biquad coefficients at band $bandIndex (${band.frequency}Hz). Resetting to pass-through.")
             filter.b0 = 1f; filter.b1 = 0f; filter.b2 = 0f
             filter.a1 = 0f; filter.a2 = 0f
             filter.isStable = true
+        } else {
+            filter.b0 = (b0D / a0D).toFloat()
+            filter.b1 = (b1D / a0D).toFloat()
+            filter.b2 = (b2D / a0D).toFloat()
+            filter.a1 = normA1
+            filter.a2 = normA2
         }
     }
 
     fun setEQBand(bandIndex: Int, frequency: Float, gain: Float, q: Float, filterType: FilterType = FilterType.PEAKING) {
         if (bandIndex in eqBands.indices) {
             eqBands[bandIndex].frequency = frequency.coerceIn(20f, 20000f)
-            eqBands[bandIndex].gain = gain.coerceIn(-20f, 20f)
+            eqBands[bandIndex].gain = gain.coerceIn(GAIN_MIN_DB, GAIN_MAX_DB)
             eqBands[bandIndex].q = q.coerceIn(0.1f, 10f)
             eqBands[bandIndex].filterType = filterType
             updateBiquadCoefficients(bandIndex)
@@ -1023,7 +1092,7 @@ class AudioEngine(private val context: Context) {
     fun addEQBand(frequency: Float, gain: Float, q: Float, filterType: FilterType = FilterType.PEAKING): Int {
         val newBand = EQBand(
             frequency = frequency.coerceIn(20f, 20000f),
-            gain = gain.coerceIn(-20f, 20f),
+            gain = gain.coerceIn(GAIN_MIN_DB, GAIN_MAX_DB),
             q = q.coerceIn(0.1f, 10f),
             filterType = filterType,
             enabled = true
@@ -1142,6 +1211,30 @@ class AudioEngine(private val context: Context) {
     fun resetNoiseCancelingProfile() {
         resetNoiseProfile()
     }
+
+    /**
+     * Copy real-time noise reduction spectra snapshots for UI visualization.
+     * Returns true if a fresh snapshot was copied; false if no new frame has been published.
+     * Audio-thread safe, zero lock, zero allocation.
+     */
+    fun copyNoiseSpectrum(
+        outBefore: FloatArray,
+        outAfter: FloatArray,
+        outNoise: FloatArray,
+        outGain: FloatArray
+    ): Boolean {
+        if (!hasNewSnapshot) return false
+        val bank = latestBank
+        val count = minOf(stftBins, outBefore.size, outAfter.size, outNoise.size, outGain.size)
+        System.arraycopy(snapBefore[bank], 0, outBefore, 0, count)
+        System.arraycopy(snapAfter[bank], 0, outAfter, 0, count)
+        System.arraycopy(snapNoise[bank], 0, outNoise, 0, count)
+        System.arraycopy(snapGain[bank], 0, outGain, 0, count)
+        hasNewSnapshot = false
+        return true
+    }
+
+    fun getSampleRate(): Int = sampleRate
 
     fun isLowLatencyMode(): Boolean = lowLatencyMode
 

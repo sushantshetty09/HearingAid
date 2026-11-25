@@ -111,3 +111,33 @@ The noise cancellation subsystem in **Hearing Aid Pro** implements a real-time, 
 - **Latency:** Adds exactly 1 hop of delay (`256 samples` = **~5.3 ms at 48 kHz**).
 - **Target Noise Types:** Highly effective against stationary background noise (AC units, fans, engine hum, road noise).
 - **Known Limitations:** Non-stationary transient noises (clapping, sudden drops) or background multi-speaker chatter (babble noise) require spatial beamforming or deep learning models beyond single-channel STFT.
+
+---
+
+## 📈 Real-Time Noise Reduction Frequency Spectrum (`NoiseSpectrumView`)
+
+To give users transparency into the spectral subtraction process, the Noise Reduction card features a live dual-spectrum graph rendered via `NoiseSpectrumView.kt`:
+
+1. **Spectral Layers Visualized:**
+   - **Input (Before) Spectrum:** Pre-reduction FFT magnitude curve $|Y_k|$ (muted violet `#9E9EB4`).
+   - **Output (After) Spectrum:** Post-Wiener gain FFT magnitude curve $|X_k| = |Y_k| \cdot G_k$ (primary cyan `#00E5FF`).
+   - **Noise Floor Profile:** Learned environmental background noise spectrum (dashed amber `#FFAB00`), visible once calibrated.
+   - **Reduction Shading:** Optional toggle chip ("Show reduction") that shades the attenuation gap between before and after curves.
+2. **Frequency & Amplitude Axes:**
+   - **X Axis:** Logarithmic scale spanning 50 Hz to 16,000 Hz, with grid markers and labels at 100 Hz, 500 Hz, 1 kHz, 5 kHz, and 10 kHz.
+   - **Y Axis:** dBFS magnitude from -90 dBFS to 0 dBFS ($20 \log_{10}(\text{mag} + 10^{-9})$) with horizontal grid lines every 20 dB.
+3. **Lock-Free Audio Thread Data Path:**
+   - Pre-allocated double-buffered snapshots (`snapBefore`, `snapAfter`, `snapNoise`, `snapGain`) published every 6 STFT frames (~31 fps).
+   - Zero lock, zero memory allocation on the real-time audio thread (`AudioEngine.copyNoiseSpectrum`).
+   - UI polls via `Choreographer` on the main thread throttled to ~30 fps, automatically stopped in background or when noise reduction is disabled to conserve battery.
+
+---
+
+## 🎚️ Extended Equalizer Gain Limit (+30 dB)
+
+The per-filter EQ gain range has been widened from -20 dB .. +20 dB to **-20 dB .. +30 dB**:
+- **UI Mapping:** 50-step slider with 0 dB centered at progress 20 (`GAIN_MIN_DB = -20f`, `GAIN_MAX_DB = 30f`).
+- **Safety & Limiter:** The soft-knee tanh limiter (`applySoftLimiter`) and automatic headroom scaling compress extreme multi-band boosts to prevent clipping and protect hearing.
+- **Acoustic Feedback Protection:** Single-bin peak howling detection ducks master gain by -12 dB within 40 ms if high-gain acoustic loop feedback is detected.
+- **High-Gain User Guidance:** A non-blocking hint alerts the user when dragging gain above +20 dB: *"High gain can cause feedback. Increase slowly."*
+

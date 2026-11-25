@@ -87,8 +87,10 @@ Hearing Aid Pro uses a dual-tier approach:
 ### Expandable Expert EQ (Biquad Filter Bank)
 Allows adding unlimited custom filter bands with configurable:
 * **Filter Types:** Peaking, Low-Pass, High-Pass, Band-Pass, Notch, Low-Shelf, High-Shelf.
+* **Gain Limit Range (-20 dB to +30 dB):** Per-band gain can be boosted up to **+30 dB** (expanded from +20 dB) to provide adequate amplification for severe frequency-specific hearing loss. 0 dB is centered at slider progress 20. Numeric labels consistently display a `+` sign for positive gain values (e.g. `+12 dB`).
+* **High-Gain Acoustic Protection:** Automatic headroom scaling (`autoHeadroomScale`) attenuates cumulative extreme boosts, while the soft-knee tanh output limiter enforces a safety ceiling at 0.92f (-0.7 dBFS). Persistent single-bin feedback howling is automatically ducked by -12 dB. When a user drags any gain slider above +20 dB, a non-blocking safety hint appears: *"High gain can cause feedback. Increase slowly."*
 * **Q Factor:** Logarithmic mapping (0.1 to 10.0) with real-time octave bandwidth calculation ($BW \approx 2 \cdot \operatorname{arsinh}(1 / (2Q)) / \ln 2$).
-* **Live Curve Preview:** Draws the continuous transfer function $H(z)$ dynamically as Q, gain, or frequency change.
+* **Live Curve Preview:** Draws the continuous transfer function $H(z)$ dynamically as Q, gain, or frequency change, with an expanded ±36 dB visual scale.
 
 ---
 
@@ -128,6 +130,13 @@ Filtered Magnitude ───┴──► [Inverse FFT & Overlap-Add] ──► O
 ### Recommended Limits:
 * **Recommended Strength:** **60% to 75%**.
 * **Limit Warning:** Do not leave strength at 100% permanently. Over-subtraction can introduce subtle "musical noise" (slight watery artifacts) in quiet speech.
+
+### Live Noise Reduction Frequency Spectrum (`NoiseSpectrumView`):
+Inside the Noise Reduction card, a dedicated real-time spectral analyzer appears when Noise Reduction is enabled:
+* **Pre- vs. Post-Reduction Spectrum:** Simultaneously plots the incoming raw magnitude curve (muted violet) against the Wiener-filtered output curve (bright cyan).
+* **Noise Profile Line:** Displays the learned stationary room noise floor as an amber dashed curve once environmental calibration finishes.
+* **Reduction Area Shading:** An interactive toggle chip (*Show reduction*) fills the shaded area between the input and output curves, visually depicting the exact decibels of noise being eliminated across 50 Hz to 16 kHz.
+* **Lock-Free Audio Pipeline:** Communicates with `AudioEngine` using double-buffered snapshot arrays, ensuring strict real-time safety with zero locks and zero allocations on the audio processing thread. A 30 fps `Choreographer` loop drives rendering and shuts down when inactive to preserve battery.
 
 ---
 

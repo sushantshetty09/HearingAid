@@ -94,7 +94,7 @@ class FilterPreviewView @JvmOverloads constructor(
         if (width <= 0 || height <= 0) return
 
         val centerY = height / 2f
-        val maxDbRange = 24f // +/- 24 dB visual scale
+        val maxDbRange = 36f // +/- 36 dB visual scale to fit +30 dB without clipping
 
         // Draw horizontal 0 dB center line
         canvas.drawLine(0f, centerY, width, centerY, centerLinePaint)
